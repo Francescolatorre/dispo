@@ -20,63 +20,13 @@ import { Project } from '../../types/project';
 import { projectService } from '../../services/projectService';
 
 interface ProjectListProps {
+  projects: Project[];
   onEdit: (project: Project) => void;
+  onDelete: (id: number) => void;
+  onArchive: (id: number) => void;
 }
 
-export const ProjectList = ({ onEdit }: ProjectListProps) => {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadProjects = async () => {
-    try {
-      setLoading(true);
-      const data = await projectService.getAll();
-      setProjects(data);
-      setError(null);
-    } catch (err) {
-      setError('Failed to load projects');
-      console.error('Error loading projects:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadProjects();
-  }, []);
-
-  const handleDelete = async (id: number) => {
-    if (!window.confirm('Are you sure you want to delete this project?')) {
-      return;
-    }
-
-    try {
-      await projectService.delete(id);
-      await loadProjects();
-    } catch (err) {
-      setError('Failed to delete project');
-      console.error('Error deleting project:', err);
-    }
-  };
-
-  const handleArchive = async (id: number) => {
-    try {
-      await projectService.archive(id);
-      await loadProjects();
-    } catch (err) {
-      setError('Failed to archive project');
-      console.error('Error archiving project:', err);
-    }
-  };
-
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
-  if (error) {
-    return <div>Error: {error}</div>;
-  }
+export const ProjectList = ({ projects, onEdit, onDelete, onArchive }: ProjectListProps) => {
 
   return (
     <Box>
@@ -93,7 +43,11 @@ export const ProjectList = ({ onEdit }: ProjectListProps) => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {projects.map((project) => (
+            {projects.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} align="center">No projects found</TableCell>
+              </TableRow>
+            ) : projects.map((project) => (
               <TableRow key={project.id}>
                 <TableCell>{project.name}</TableCell>
                 <TableCell>{project.project_manager}</TableCell>
@@ -136,7 +90,7 @@ export const ProjectList = ({ onEdit }: ProjectListProps) => {
                     <>
                       <Tooltip title="Archivieren">
                         <IconButton
-                          onClick={() => handleArchive(project.id)}
+                          onClick={() => onArchive(project.id)}
                           size="small"
                           aria-label="Archivieren"
                         >
@@ -145,7 +99,7 @@ export const ProjectList = ({ onEdit }: ProjectListProps) => {
                       </Tooltip>
                       <Tooltip title="Löschen">
                         <IconButton
-                          onClick={() => handleDelete(project.id)}
+                          onClick={() => onDelete(project.id)}
                           size="small"
                           color="error"
                           aria-label="Löschen"

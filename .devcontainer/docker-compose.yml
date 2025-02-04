@@ -18,7 +18,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    network_mode: service:db
+    ports:
+      - "3000:3000"
 
   db:
     image: postgres:15

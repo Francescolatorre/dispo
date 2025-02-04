@@ -11,7 +11,6 @@ import {
   Chip,
   Tooltip,
   Box,
-  Button,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -99,7 +98,11 @@ export const EmployeeList = ({ onEdit }: EmployeeListProps) => {
                 <TableCell>{employee.work_time_factor.toFixed(2)}</TableCell>
                 <TableCell>
                   {employee.contract_end_date
-                    ? new Date(employee.contract_end_date).toLocaleDateString()
+                    ? new Date(employee.contract_end_date).toLocaleDateString('de-DE', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                      })
                     : 'Unbefristet'}
                 </TableCell>
                 <TableCell>

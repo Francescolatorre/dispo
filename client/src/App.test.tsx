@@ -21,7 +21,7 @@ describe('App Component', () => {
     // Navigate to Projects
     const nav = screen.getByRole('navigation');
     await user.click(within(nav).getByText('Projekte'));
-    expect(screen.getByText(/projekte verwalten/i)).toBeInTheDocument();
+    expect(screen.getByText(/neues projekt/i)).toBeInTheDocument();
 
     // Navigate to Employees
     await user.click(within(nav).getByText('Mitarbeiter'));

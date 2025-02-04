@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   AppBar,
   Box,
@@ -22,6 +22,7 @@ const drawerWidth = 240;
 
 export const Navigation = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const location = useLocation();
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -35,14 +36,23 @@ export const Navigation = () => {
   ];
 
   const drawer = (
-    <Box sx={{ overflow: 'auto' }}>
+    <Box sx={{ overflow: 'auto' }} component="nav">
       <List>
-        {menuItems.map((item) => (
-          <ListItemButton key={item.text} component={Link} to={item.path}>
-            <ListItemIcon>{item.icon}</ListItemIcon>
-            <ListItemText primary={item.text} />
-          </ListItemButton>
-        ))}
+        {menuItems.map((item) => {
+          const isSelected = location.pathname === item.path;
+          return (
+            <ListItemButton
+              key={item.text}
+              component={Link}
+              to={item.path}
+              selected={isSelected}
+              aria-current={isSelected ? 'page' : undefined}
+            >
+              <ListItemIcon>{item.icon}</ListItemIcon>
+              <ListItemText primary={item.text} />
+            </ListItemButton>
+          );
+        })}
       </List>
     </Box>
   );
