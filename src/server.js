@@ -3,6 +3,7 @@ const cors = require('cors');
 require('dotenv').config();
 const db = require('./config/database');
 const employeesRouter = require('./routes/employees');
+const projectsRouter = require('./routes/projects');
 
 const app = express();
 
@@ -12,6 +13,7 @@ app.use(express.json());
 
 // Routes
 app.use('/api/employees', employeesRouter);
+app.use('/api/projects', projectsRouter);
 
 // Basic route for testing
 app.get('/', (req, res) => {
