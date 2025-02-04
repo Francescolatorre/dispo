@@ -21,15 +21,15 @@
 **damit** ich den Projektstatus und relevante Informationen verfolgen kann
 
 **Akzeptanzkriterien:**
-- [ ] Projektanlage mit folgenden Pflichtfeldern:
+- [x] Projektanlage mit folgenden Pflichtfeldern:
   - Name
   - Start-Datum
   - End-Datum
   - Projektleiter
   - Links zu Dokumentation
-- [ ] Bearbeitung bestehender Projekte
-- [ ] Archivierungsfunktion für abgeschlossene Projekte
-- [ ] Archivierte Projekte sind separat abrufbar
+- [x] Bearbeitung bestehender Projekte
+- [x] Archivierungsfunktion für abgeschlossene Projekte
+- [x] Archivierte Projekte sind separat abrufbar
 
 ## 3. Mitarbeiter- und Ressourcenplanung
 

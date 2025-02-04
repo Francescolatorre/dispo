@@ -24,7 +24,7 @@
 - [x] API Development
   - [x] Express server configured
   - [x] Employee management endpoints (100%)
-  - [ ] Project management endpoints (0%)
+  - [x] Project management endpoints (100%)
   - [ ] Absence management endpoints (0%)
   - [ ] Authentication endpoints (0%)
 
@@ -36,8 +36,8 @@
 
 - [ ] Features
   - [ ] Authentication UI (0%)
-  - [ ] Employee management UI (10%)
-  - [ ] Project management UI (0%)
+  - [x] Employee management UI (100%)
+  - [x] Project management UI (100%)
   - [ ] Resource planning UI (0%)
   - [ ] Reporting UI (0%)
 
@@ -56,10 +56,10 @@
    - Login functionality
    - JWT implementation
 
-2. Project Management
-   - Project CRUD operations
-   - Archiving functionality
-   - Basic filtering
+2. Resource Planning
+   - Absence management
+   - Capacity planning
+   - Contract tracking
 
 ## Upcoming Features
 1. Resource Planning
