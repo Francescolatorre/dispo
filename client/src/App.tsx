@@ -1,29 +1,28 @@
-  
-  import { ThemeProvider } from '@mui/material/styles';
-import { AppBar, Box, Container, CssBaseline, Toolbar, Typography } from '@mui/material';
+import { ThemeProvider } from '@mui/material/styles';
+import { CssBaseline } from '@mui/material';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { theme } from './styles/theme';
+import { Layout } from './components/layout/Layout';
+import { Dashboard } from './pages/Dashboard';
+import { Projects } from './pages/Projects';
+import { Employees } from './pages/Employees';
+import { Reports } from './pages/Reports';
 
 function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Box sx={{ flexGrow: 1 }}>
-        <AppBar position="static">
-          <Toolbar>
-            <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-              DispoMVP
-            </Typography>
-          </Toolbar>
-        </AppBar>
-        <Container maxWidth="lg" sx={{ mt: 4 }}>
-          <Typography variant="h4" component="h1" gutterBottom>
-            Willkommen bei DispoMVP
-          </Typography>
-          <Typography variant="body1">
-            Ressourcen- und Projektplanung leicht gemacht
-          </Typography>
-        </Container>
-      </Box>
+      <BrowserRouter>
+        <Layout>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/projects" element={<Projects />} />
+            <Route path="/employees" element={<Employees />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Layout>
+      </BrowserRouter>
     </ThemeProvider>
   );
 }
