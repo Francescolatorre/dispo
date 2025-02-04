@@ -18,9 +18,9 @@
   - [x] Datenbank Integration
   - [x] API Endpoints für Mitarbeiterverwaltung
   
-- [ ] Frontend Entwicklung
-  - [ ] React Setup
-  - [ ] UI Komponenten
+- [x] Frontend Entwicklung
+  - [x] React Setup
+  - [x] UI Komponenten (Basic)
   - [ ] Routing
 
 ## Upcoming

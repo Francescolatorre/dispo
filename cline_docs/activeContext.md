@@ -1,34 +1,35 @@
 # Active Context
 
 ## Current Focus
-- Initial Setup und Projektstruktur
-- Einrichtung der Entwicklungsumgebung
-- Planung der ersten Implementierungsschritte
+- Implementierung der Kernfunktionalitäten
+- Frontend Routing und Navigation
+- Integration von Frontend und Backend
 
 ## Recent Changes
-- Erstellung der Memory Bank Dokumentation
-- Definition der Systemarchitektur
-- Festlegung technischer Patterns
+- Frontend Projekt mit React und TypeScript aufgesetzt
+- Material-UI implementiert und konfiguriert
+- Basis-Layout mit AppBar erstellt
+- Projektstruktur nach Best Practices organisiert
 
 ## Next Steps
 
-### 1. Projekt Setup
-- [ ] Git Repository initialisieren
-- [ ] Node.js Projekt aufsetzen
-- [ ] PostgreSQL Datenbank einrichten
-- [ ] Basis-Dependencies installieren
+### 1. Frontend Routing
+- [ ] React Router implementieren
+- [ ] Geschützte Routen einrichten
+- [ ] Navigation-Komponenten erstellen
+- [ ] Breadcrumb-Navigation hinzufügen
 
-### 2. Backend Grundstruktur
-- [ ] Express Server Setup
-- [ ] Datenbank-Verbindung
-- [ ] Basis API-Endpoints
-- [ ] Authentication Middleware
+### 2. Authentication
+- [ ] Login-Formular erstellen
+- [ ] Token-basierte Auth implementieren
+- [ ] Protected Routes Setup
+- [ ] Error Handling
 
-### 3. Frontend Grundstruktur
-- [ ] React Projekt initialisieren
-- [ ] Material-UI einbinden
-- [ ] Routing Setup
-- [ ] Basis-Komponenten erstellen
+### 3. Projekt Management
+- [ ] Projekt-Liste Komponente
+- [ ] Projekt-Details Ansicht
+- [ ] Projekt CRUD Operationen
+- [ ] Filter und Suche
 
 ### 4. Erste Features
 - [ ] Benutzerauthentifizierung
