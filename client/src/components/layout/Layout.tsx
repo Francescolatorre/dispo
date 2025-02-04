@@ -1,4 +1,4 @@
-import { Box, Toolbar } from '@mui/material';
+import { Box, AppBar, Toolbar, Typography } from '@mui/material';
 import { Navigation } from './Navigation';
 
 interface LayoutProps {
@@ -7,17 +7,18 @@ interface LayoutProps {
 
 export const Layout = ({ children }: LayoutProps) => {
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+    <Box sx={{ display: 'flex' }}>
       <Navigation />
       <Box
         component="main"
         sx={{
           flexGrow: 1,
           p: 3,
-          width: { sm: `calc(100% - 240px)` },
+          width: '100%',
+          boxSizing: 'border-box',
         }}
       >
-        <Toolbar /> {/* Spacer for fixed AppBar */}
+        <Toolbar />
         {children}
       </Box>
     </Box>
