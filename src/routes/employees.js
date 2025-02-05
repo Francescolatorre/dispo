@@ -51,11 +51,12 @@ router.post('/', validateEmployee, async (req, res) => {
       `INSERT INTO employees (
         name,
         seniority_level,
+        level_code,
         qualifications,
         work_time_factor,
         contract_end_date
-      ) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [name, seniority_level, qualifications, work_time_factor, contract_end_date]
+      ) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [name, seniority_level, req.body.level_code, qualifications, work_time_factor, contract_end_date]
     );
 
     res.status(201).json(result.rows[0]);
@@ -81,13 +82,14 @@ router.put('/:id', validateEmployee, async (req, res) => {
       `UPDATE employees
        SET name = $1,
            seniority_level = $2,
-           qualifications = $3,
-           work_time_factor = $4,
-           contract_end_date = $5,
+           level_code = $3,
+           qualifications = $4,
+           work_time_factor = $5,
+           contract_end_date = $6,
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $6
+       WHERE id = $7
        RETURNING *`,
-      [name, seniority_level, qualifications, work_time_factor, contract_end_date, id]
+      [name, seniority_level, req.body.level_code, qualifications, work_time_factor, contract_end_date, id]
     );
 
     if (result.rows.length === 0) {

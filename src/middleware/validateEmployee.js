@@ -1,3 +1,10 @@
+const LEVEL_CODES = {
+  Junior: 'JR',
+  Mid: 'MID',
+  Senior: 'SR',
+  Lead: 'LD'
+};
+
 const validateEmployee = (req, res, next) => {
   const { name, seniority_level, qualifications, work_time_factor } = req.body;
 
@@ -8,10 +15,13 @@ const validateEmployee = (req, res, next) => {
     errors.push('Name must be at least 2 characters long');
   }
 
-  // Validate seniority_level
+  // Validate seniority_level and set level_code
   const validLevels = ['Junior', 'Mid', 'Senior', 'Lead'];
   if (!seniority_level || !validLevels.includes(seniority_level)) {
     errors.push(`Seniority level must be one of: ${validLevels.join(', ')}`);
+  } else {
+    // Automatically set the level_code based on seniority_level
+    req.body.level_code = LEVEL_CODES[seniority_level];
   }
 
   // Validate qualifications

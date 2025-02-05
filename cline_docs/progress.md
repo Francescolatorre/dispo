@@ -17,8 +17,12 @@
 
 ## Backend Implementation (40% Complete)
 - [x] Database Schema
-  - [x] All required tables created
-  - [x] Relationships defined
+  - [x] Core tables created (employees, projects)
+  - [x] Project assignments junction table added
+  - [x] Relationships defined:
+    * Project manager as employee reference
+    * Many-to-many project-employee assignments
+    * Assignment date constraints
   - [x] Migrations setup
 
 - [x] API Development
@@ -38,6 +42,7 @@
   - [ ] Authentication UI (0%)
   - [x] Employee management UI (100%)
   - [x] Project management UI (100%)
+  - [ ] Project Timeline View (0%)
   - [ ] Resource planning UI (0%)
   - [ ] Reporting UI (0%)
 
@@ -51,12 +56,33 @@
   - [ ] E2E tests (0%)
 
 ## Current Sprint Focus
-1. Authentication System
+1. Project Timeline View
+   - Monatliche Zeitachse (Dec 2024 - Dec 2025)
+   - Projekt-Header mit:
+     * Name und Projekt-ID
+     * Laufzeit und Standort
+     * FTE-Anzahl und Projektleiter
+   - Mitarbeiter-Grid mit Spalten:
+     * DR und Position Status
+     * Name und Seniorität
+     * Level-Code (z.B. SE31, C18)
+     * AZF und Auslastung
+     * Start- und Enddatum
+     * Skills als Tags
+   - Farbliche Auslastungsanzeige
+
+2. Project Resource Management
+   - Project-employee assignment implementation
+   - Assignment date validation
+   - Automatic project manager assignment
+   - Assignment percentage tracking
+
+2. Authentication System
    - User registration
    - Login functionality
    - JWT implementation
 
-2. Resource Planning
+3. Resource Planning
    - Absence management
    - Capacity planning
    - Contract tracking

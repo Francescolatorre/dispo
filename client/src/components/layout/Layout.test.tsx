@@ -25,7 +25,7 @@ describe('Layout Component', () => {
     );
     
     // Check for navigation elements
-    const nav = screen.getByRole('navigation');
+    const nav = screen.getByTestId('main-navigation');
     expect(nav).toBeInTheDocument();
     expect(within(nav).getByText('Dashboard')).toBeInTheDocument();
     
@@ -46,7 +46,7 @@ describe('Layout Component', () => {
     expect(main).toBeInTheDocument();
     
     // Check for navigation drawer
-    expect(screen.getByRole('navigation')).toBeInTheDocument();
+    expect(screen.getByTestId('main-navigation')).toBeInTheDocument();
     
     // Check for app bar
     expect(screen.getByRole('banner')).toBeInTheDocument();

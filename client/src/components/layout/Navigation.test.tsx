@@ -30,7 +30,7 @@ describe('Navigation Component', () => {
     await user.click(menuButton);
     
     // Verify navigation items are visible after clicking menu button
-    const drawer = screen.getByRole('navigation');
+    const drawer = screen.getByTestId('main-navigation');
     expect(within(drawer).getByText('Dashboard')).toBeVisible();
     expect(within(drawer).getByText('Projekte')).toBeVisible();
     expect(within(drawer).getByText('Mitarbeiter')).toBeVisible();

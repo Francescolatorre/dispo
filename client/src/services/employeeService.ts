@@ -1,10 +1,8 @@
 import { Employee } from '../types/employee';
 
-const API_URL = 'http://localhost:3000/api';
-
 export const employeeService = {
   getAll: async (): Promise<Employee[]> => {
-    const response = await fetch(`${API_URL}/employees`);
+    const response = await fetch('/api/employees');
     if (!response.ok) {
       throw new Error('Failed to fetch employees');
     }
@@ -12,7 +10,7 @@ export const employeeService = {
   },
 
   getById: async (id: number): Promise<Employee> => {
-    const response = await fetch(`${API_URL}/employees/${id}`);
+    const response = await fetch(`/api/employees/${id}`);
     if (!response.ok) {
       throw new Error('Failed to fetch employee');
     }
@@ -20,7 +18,7 @@ export const employeeService = {
   },
 
   create: async (employee: Omit<Employee, 'id' | 'created_at' | 'updated_at'>): Promise<Employee> => {
-    const response = await fetch(`${API_URL}/employees`, {
+    const response = await fetch('/api/employees', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -34,7 +32,7 @@ export const employeeService = {
   },
 
   update: async (id: number, employee: Omit<Employee, 'id' | 'created_at' | 'updated_at'>): Promise<Employee> => {
-    const response = await fetch(`${API_URL}/employees/${id}`, {
+    const response = await fetch(`/api/employees/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -48,7 +46,7 @@ export const employeeService = {
   },
 
   delete: async (id: number): Promise<void> => {
-    const response = await fetch(`${API_URL}/employees/${id}`, {
+    const response = await fetch(`/api/employees/${id}`, {
       method: 'DELETE',
     });
     if (!response.ok) {

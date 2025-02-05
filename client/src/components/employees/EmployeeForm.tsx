@@ -68,8 +68,8 @@ export const EmployeeForm = ({
     }
 
     if (typeof formData.work_time_factor !== 'number' || 
-        formData.work_time_factor <= 0 || 
-        formData.work_time_factor > 1) {
+        formData.work_time_factor < 0.1 || 
+        formData.work_time_factor > 1.0) {
       validationErrors.push('Arbeitszeitfaktor muss zwischen 0 und 1 liegen');
     }
 

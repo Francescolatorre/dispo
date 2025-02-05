@@ -18,6 +18,7 @@ DispoMVP ist ein Minimum Viable Product für die Ressourcen- und Projektplanung 
 2. Transparente Ressourcenplanung unter Berücksichtigung von:
    - Mitarbeiterqualifikationen
    - Arbeitszeitfaktoren
+   - Projektspezifische Zeiträume und Auslastung
    - Abwesenheiten
    - Vertragsenden
 3. Filterbare Berichterstellung für Ressourcenübersicht
@@ -25,15 +26,26 @@ DispoMVP ist ein Minimum Viable Product für die Ressourcen- und Projektplanung 
 
 ## Expected Workflow
 1. Administratoren legen Benutzer an
-2. Projekte werden mit Basis-Attributen erstellt
+2. Projekte werden mit Basis-Attributen und Projektleiter erstellt
+   - Projektleiter wird automatisch als Projektmitglied zugewiesen
 3. Mitarbeiter werden mit Qualifikationen erfasst
-4. Ressourcenplanung erfolgt unter Berücksichtigung der Verfügbarkeiten
-5. Berichtswesen ermöglicht Analyse der Ressourcenauslastung
-6. Abgeschlossene Projekte können archiviert werden
+4. Ressourcenplanung erfolgt durch:
+   - Zuweisung von Mitarbeitern zu Projekten
+   - Definition von Start- und Enddatum pro Zuweisung
+   - Festlegung der prozentualen Auslastung und Rolle
+   - Mehrere parallele Projektzuweisungen möglich
+5. Projektübersicht in wochenbasierter Timeline
+   - Visualisierung aller Projektlaufzeiten
+   - Detailansicht der Mitarbeiterzuweisungen per Klick
+   - Anzeige von Rollen und Zeiträumen
+6. Berichtswesen ermöglicht Analyse der Ressourcenauslastung
+7. Abgeschlossene Projekte können archiviert werden
 
 ## Key Features
 - Benutzer- und Projektverwaltung
 - Mitarbeiter-Ressourcenplanung
+- Wochenbasierte Projekt-Timeline
+- Detaillierte Ressourcenzuweisung mit Rollen
 - Abwesenheitsmanagement
 - Berichtswesen mit Filterfunktionen
 - CSV-Import/-Export

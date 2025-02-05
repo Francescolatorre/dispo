@@ -58,6 +58,7 @@ describe('EmployeeForm', () => {
     expect(defaultProps.onSave).toHaveBeenCalledWith({
       name: 'Jane Smith',
       seniority_level: 'Mid',
+      level_code: 'MID',
       qualifications: [],
       work_time_factor: 0.8,
       contract_end_date: null,
@@ -90,7 +91,7 @@ describe('EmployeeForm', () => {
     const workTimeFactorInput = screen.getByLabelText(/arbeitszeitfaktor/i);
 
     // Test invalid values
-    fireEvent.change(workTimeFactorInput, { target: { value: '0' } });
+    fireEvent.change(workTimeFactorInput, { target: { value: '0.05' } });
     fireEvent.click(screen.getByText(/speichern/i));
     expect(defaultProps.onSave).not.toHaveBeenCalled();
     expect(screen.getByText('Arbeitszeitfaktor muss zwischen 0 und 1 liegen')).toBeInTheDocument();

@@ -25,8 +25,16 @@
    - Validierung von Eingabedaten
 
 2. **Datenbank Design**
-   - Normalisierte Tabellenstruktur
-   - Referentielle Integrität
+   - Normalisierte Tabellenstruktur mit:
+     * employees (Mitarbeiterdaten)
+     * projects (Projektdaten mit Referenz auf Projektleiter)
+     * project_assignments (Verknüpfungstabelle für Projekt-Mitarbeiter Zuweisungen)
+   - Referentielle Integrität durch Foreign Keys:
+     * Projektleiter muss existierender Mitarbeiter sein
+     * Projekt-Mitarbeiter Zuweisungen referenzieren gültige Projekte und Mitarbeiter
+   - Zeitliche Validierung:
+     * Mitarbeiterzuweisungen müssen innerhalb der Projektlaufzeit liegen
+     * Automatische Projektzuweisung für Projektleiter
    - Indizierung für Performance
 
 3. **Authentication**
@@ -81,6 +89,18 @@
    - Responsive Grid System
    - Flexible Containers
    - Adaptive Design
+   - Timeline Visualization:
+     * Monatliche Zeitachse (X-Achse)
+     * Projekte als horizontale Container
+     * Projekt-Header mit Meta-Informationen:
+       - Name, ID, Laufzeit, Standort, FTE
+     * Mitarbeiter-Grid pro Projekt:
+       - Spalten: DR, Position, Status, Name, Seniorität, Level
+       - Numerische Spalten: AZF, Plan
+       - Datum-Spalten: Start, End
+       - Skills als Tags
+     * Farbkodierung für Auslastungsgrade
+     * Vertikale Anordnung mehrerer Projekte
 
 ### Backend Patterns
 1. **API Patterns**
@@ -92,6 +112,10 @@
    - Repository Pattern
    - Unit of Work
    - Query Objects
+   - Temporal Data Patterns:
+     * Zeitbasierte Abfragen für Timeline
+     * Überlappende Zeiträume für Zuweisungen
+     * Validierung von Zeitspannen
 
 3. **Security Patterns**
    - Authentication Middleware

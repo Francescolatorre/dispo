@@ -95,7 +95,7 @@ export const EmployeeList = ({ onEdit }: EmployeeListProps) => {
                     />
                   ))}
                 </TableCell>
-                <TableCell>{employee.work_time_factor.toFixed(2)}</TableCell>
+                <TableCell>{Number(employee.work_time_factor).toFixed(2)}</TableCell>
                 <TableCell>
                   {employee.contract_end_date
                     ? new Date(employee.contract_end_date).toLocaleDateString('de-DE', {

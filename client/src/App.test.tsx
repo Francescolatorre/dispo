@@ -19,7 +19,7 @@ describe('App Component', () => {
     const user = userEvent.setup();
 
     // Navigate to Projects
-    const nav = screen.getByRole('navigation');
+    const nav = screen.getByTestId('main-navigation');
     await user.click(within(nav).getByText('Projekte'));
     expect(screen.getByText(/neues projekt/i)).toBeInTheDocument();
 
@@ -44,13 +44,13 @@ describe('App Component', () => {
 
     // Check initial layout
     expect(screen.getByRole('banner')).toBeInTheDocument();
-    expect(screen.getByRole('navigation')).toBeInTheDocument();
+    expect(screen.getByTestId('main-navigation')).toBeInTheDocument();
     expect(screen.getByRole('main')).toBeInTheDocument();
 
     // Navigate and check if layout persists
-    await user.click(within(screen.getByRole('navigation')).getByText('Projekte'));
+    await user.click(within(screen.getByTestId('main-navigation')).getByText('Projekte'));
     expect(screen.getByRole('banner')).toBeInTheDocument();
-    expect(screen.getByRole('navigation')).toBeInTheDocument();
+    expect(screen.getByTestId('main-navigation')).toBeInTheDocument();
     expect(screen.getByRole('main')).toBeInTheDocument();
   });
 

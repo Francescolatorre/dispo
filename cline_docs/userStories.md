@@ -25,11 +25,26 @@
   - Name
   - Start-Datum
   - End-Datum
-  - Projektleiter
+  - Projektleiter (muss existierender Mitarbeiter sein)
   - Links zu Dokumentation
+- [x] Projektleiter wird automatisch als Projektmitglied hinzugefügt
 - [x] Bearbeitung bestehender Projekte
 - [x] Archivierungsfunktion für abgeschlossene Projekte
 - [x] Archivierte Projekte sind separat abrufbar
+
+### US-2.1: Project Resource Assignment
+**Als** Projektleiter  
+**möchte ich** Mitarbeiter mit spezifischen Zeiträumen Projekten zuweisen können  
+**damit** ich die Ressourcenplanung effektiv verwalten kann
+
+**Akzeptanzkriterien:**
+- [ ] Mitarbeiterzuweisung zu Projekten mit:
+  - Start-Datum (muss innerhalb Projektlaufzeit liegen)
+  - End-Datum (muss innerhalb Projektlaufzeit liegen)
+  - Auslastung in Prozent
+- [ ] Ein Mitarbeiter kann mehreren Projekten gleichzeitig zugewiesen sein
+- [ ] Ein Projekt kann mehrere Mitarbeiter haben
+- [ ] Validierung der Zuweisungszeiträume gegen Projektlaufzeit
 
 ## 3. Mitarbeiter- und Ressourcenplanung
 
@@ -48,9 +63,34 @@
 - [ ] Erfassung von Abwesenheiten
 - [ ] Berücksichtigung von Vertragsenden in der Planung
 
-## 4. Berichtswesen und Analyse
+## 4. Projektvisualisierung und Analyse
 
-### US-4: Resource Reporting
+### US-4: Project Timeline View
+**Als** Benutzer  
+**möchte ich** Projekte in einer zeitbasierten Übersicht sehen  
+**damit** ich einen klaren Überblick über alle Projektlaufzeiten habe
+
+**Akzeptanzkriterien:**
+- [ ] Timeline-Ansicht mit Monaten auf der X-Achse
+- [ ] Projekte als Zeilen mit:
+  - Projektname und ID
+  - Datum von-bis
+  - Standort
+  - FTE-Anzahl
+  - Projektleiter
+- [ ] Mitarbeiterzuweisungen mit:
+  - Rolle (z.B. Principle PL, Senior PL)
+  - Status
+  - Mitarbeitername
+  - Seniorität
+  - Level-Code
+  - Auslastung in Prozent
+  - Start- und Enddatum
+  - Skills/Qualifikationen
+- [ ] Farbliche Hervorhebung der Auslastung
+- [ ] Übersichtliche Darstellung mehrerer Projekte untereinander
+
+### US-4.1: Resource Reporting
 **Als** Projektleiter  
 **möchte ich** Berichte über die Ressourcennutzung erstellen können  
 **damit** ich die Effizienz der Teams analysieren kann
@@ -61,6 +101,7 @@
   - Team
   - Projektname
   - Mitarbeitername
+  - Zeitraum der Projektzuweisung
 - [ ] Export der gefilterten Daten
 
 ## 5. Integration und Datenimport/-export
@@ -74,6 +115,7 @@
 - [ ] CSV-Import für:
   - Projekte
   - Mitarbeiter
+  - Projektzuweisungen
   - Abwesenheiten
 - [ ] CSV-Export für alle Datenbereiche
 - [ ] Validierung der Import-Daten

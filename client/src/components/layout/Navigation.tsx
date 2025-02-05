@@ -36,7 +36,7 @@ export const Navigation = () => {
   ];
 
   const drawer = (
-    <Box sx={{ overflow: 'auto' }} component="nav">
+    <Box sx={{ overflow: 'auto' }} component="nav" data-testid="main-navigation">
       <List>
         {menuItems.map((item) => {
           const isSelected = location.pathname === item.path;

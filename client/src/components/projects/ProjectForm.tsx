@@ -65,8 +65,24 @@ export const ProjectForm = ({
     }
   }, [project]);
 
+  const [endDateError, setEndDateError] = useState<string>('');
+
+  const validateDates = () => {
+    if (new Date(formData.end_date) <= new Date(formData.start_date)) {
+      setEndDateError('End date must be after start date');
+      return false;
+    }
+    setEndDateError('');
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateDates()) {
+      return;
+    }
+
     await onSave(formData);
     onClose();
   };
@@ -132,13 +148,18 @@ export const ProjectForm = ({
             />
 
             <TextField
+              id="end_date"
               label="End-Datum"
               type="date"
               value={formData.end_date}
-              onChange={(e) =>
-                setFormData({ ...formData, end_date: e.target.value })
-              }
+              onChange={(e) => {
+                setFormData({ ...formData, end_date: e.target.value });
+                setEndDateError('');
+              }}
               required
+              error={!!endDateError}
+              helperText={endDateError}
+              aria-invalid={!!endDateError}
               InputLabelProps={{
                 shrink: true,
               }}
@@ -196,6 +217,7 @@ export const ProjectForm = ({
                   href={link}
                   target="_blank"
                   clickable
+                  deleteIcon={<DeleteIcon data-testid="DeleteIcon" />}
                 />
               ))}
             </Box>
