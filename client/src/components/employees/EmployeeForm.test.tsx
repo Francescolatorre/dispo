@@ -93,21 +93,21 @@ describe('EmployeeForm', () => {
     fireEvent.change(workTimeFactorInput, { target: { value: '0' } });
     fireEvent.click(screen.getByText(/speichern/i));
     expect(defaultProps.onSave).not.toHaveBeenCalled();
-    expect(screen.getByText(/arbeitszeitfaktor muss zwischen 0 und 1 liegen/i)).toBeInTheDocument();
+    expect(screen.getByText('Arbeitszeitfaktor muss zwischen 0 und 1 liegen')).toBeInTheDocument();
 
     fireEvent.change(workTimeFactorInput, { target: { value: '1.1' } });
     fireEvent.click(screen.getByText(/speichern/i));
     expect(defaultProps.onSave).not.toHaveBeenCalled();
-    expect(screen.getByText(/arbeitszeitfaktor muss zwischen 0 und 1 liegen/i)).toBeInTheDocument();
+    expect(screen.getByText('Arbeitszeitfaktor muss zwischen 0 und 1 liegen')).toBeInTheDocument();
 
     // Test valid values
     fireEvent.change(workTimeFactorInput, { target: { value: '0.1' } });
-    expect(screen.queryByText(/arbeitszeitfaktor muss zwischen 0 und 1 liegen/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('Arbeitszeitfaktor muss zwischen 0 und 1 liegen')).not.toBeInTheDocument();
 
     fireEvent.change(workTimeFactorInput, { target: { value: '0.5' } });
-    expect(screen.queryByText(/arbeitszeitfaktor muss zwischen 0 und 1 liegen/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('Arbeitszeitfaktor muss zwischen 0 und 1 liegen')).not.toBeInTheDocument();
 
     fireEvent.change(workTimeFactorInput, { target: { value: '1.0' } });
-    expect(screen.queryByText(/arbeitszeitfaktor muss zwischen 0 und 1 liegen/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('Arbeitszeitfaktor muss zwischen 0 und 1 liegen')).not.toBeInTheDocument();
   });
 });
