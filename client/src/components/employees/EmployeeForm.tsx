@@ -212,10 +212,12 @@ export const EmployeeForm = ({
                   work_time_factor: value,
                 });
                 // Validate work_time_factor immediately
-                if (value <= 0 || value > 1) {
-                  setErrors(['Arbeitszeitfaktor muss zwischen 0 und 1 liegen']);
-                } else {
-                  setErrors([]);
+                if (!isNaN(value)) {
+                  if (value <= 0 || value > 1) {
+                    setErrors(['Arbeitszeitfaktor muss zwischen 0 und 1 liegen']);
+                  } else {
+                    setErrors([]);
+                  }
                 }
               }}
               required
