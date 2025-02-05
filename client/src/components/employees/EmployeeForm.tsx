@@ -103,7 +103,8 @@ export const EmployeeForm = ({
         contract_end_date: null,
       });
     }
-  }, [employee]);
+    setErrors([]);
+  }, [employee, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -211,14 +212,6 @@ export const EmployeeForm = ({
                   ...formData,
                   work_time_factor: value,
                 });
-                // Validate work_time_factor immediately
-                if (!isNaN(value)) {
-                  if (value <= 0 || value > 1) {
-                    setErrors(['Arbeitszeitfaktor muss zwischen 0 und 1 liegen']);
-                  } else {
-                    setErrors([]);
-                  }
-                }
               }}
               required
               inputProps={{
