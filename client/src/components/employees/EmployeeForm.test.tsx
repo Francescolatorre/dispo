@@ -1,12 +1,13 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { EmployeeForm } from './EmployeeForm';
-import { vi } from 'vitest';
+import { vi, describe, it, expect } from 'vitest';
 
 describe('EmployeeForm', () => {
   const mockEmployee = {
     id: 1,
     name: 'John Doe',
     seniority_level: 'Mid',
+    level_code: 'MID',
     qualifications: ['TypeScript', 'React'],
     work_time_factor: 1.0,
     contract_end_date: '2025-12-31',
@@ -71,7 +72,7 @@ describe('EmployeeForm', () => {
     expect(defaultProps.onClose).toHaveBeenCalled();
   });
 
-  it('validates required fields', async () => {
+  it('validates required fields and work time factor range', async () => {
     render(<EmployeeForm {...defaultProps} />);
 
     // Clear name field
@@ -84,5 +85,29 @@ describe('EmployeeForm', () => {
 
     expect(defaultProps.onSave).not.toHaveBeenCalled();
     expect(screen.getByLabelText(/name/i)).toBeInvalid();
+
+    // Test work time factor validation
+    const workTimeFactorInput = screen.getByLabelText(/arbeitszeitfaktor/i);
+
+    // Test invalid values
+    fireEvent.change(workTimeFactorInput, { target: { value: '0' } });
+    fireEvent.click(screen.getByText(/speichern/i));
+    expect(defaultProps.onSave).not.toHaveBeenCalled();
+    expect(screen.getByText(/arbeitszeitfaktor muss zwischen 0 und 1 liegen/i)).toBeInTheDocument();
+
+    fireEvent.change(workTimeFactorInput, { target: { value: '1.1' } });
+    fireEvent.click(screen.getByText(/speichern/i));
+    expect(defaultProps.onSave).not.toHaveBeenCalled();
+    expect(screen.getByText(/arbeitszeitfaktor muss zwischen 0 und 1 liegen/i)).toBeInTheDocument();
+
+    // Test valid values
+    fireEvent.change(workTimeFactorInput, { target: { value: '0.1' } });
+    expect(screen.queryByText(/arbeitszeitfaktor muss zwischen 0 und 1 liegen/i)).not.toBeInTheDocument();
+
+    fireEvent.change(workTimeFactorInput, { target: { value: '0.5' } });
+    expect(screen.queryByText(/arbeitszeitfaktor muss zwischen 0 und 1 liegen/i)).not.toBeInTheDocument();
+
+    fireEvent.change(workTimeFactorInput, { target: { value: '1.0' } });
+    expect(screen.queryByText(/arbeitszeitfaktor muss zwischen 0 und 1 liegen/i)).not.toBeInTheDocument();
   });
 });

@@ -6,6 +6,7 @@ import {
   DialogActions,
   TextField,
   Button,
+  Alert,
   FormControl,
   InputLabel,
   Select,
@@ -13,7 +14,7 @@ import {
   Autocomplete,
   Box,
 } from '@mui/material';
-import { Employee, SENIORITY_LEVELS, NewEmployee } from '../../types/employee';
+import { Employee, SENIORITY_LEVELS, LEVEL_CODES, NewEmployee } from '../../types/employee';
 
 const COMMON_QUALIFICATIONS = [
   'JavaScript',
@@ -47,16 +48,47 @@ export const EmployeeForm = ({
   const [formData, setFormData] = useState<NewEmployee>({
     name: '',
     seniority_level: 'Junior',
+    level_code: LEVEL_CODES.Junior,
     qualifications: [],
     work_time_factor: 1.0,
     contract_end_date: null,
   });
+  const [errors, setErrors] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const validateForm = (): string[] => {
+    const validationErrors: string[] = [];
+    
+    if (!formData.name || formData.name.trim().length < 2) {
+      validationErrors.push('Name muss mindestens 2 Zeichen lang sein');
+    }
+
+    if (!formData.qualifications || formData.qualifications.length === 0) {
+      validationErrors.push('Mindestens eine Qualifikation ist erforderlich');
+    }
+
+    if (typeof formData.work_time_factor !== 'number' || 
+        formData.work_time_factor <= 0 || 
+        formData.work_time_factor > 1) {
+      validationErrors.push('Arbeitszeitfaktor muss zwischen 0 und 1 liegen');
+    }
+
+    if (formData.contract_end_date) {
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(formData.contract_end_date)) {
+        validationErrors.push('Vertragsende muss im Format JJJJ-MM-TT sein');
+      }
+    }
+
+    return validationErrors;
+  };
 
   useEffect(() => {
     if (employee) {
       setFormData({
         name: employee.name,
         seniority_level: employee.seniority_level,
+        level_code: employee.level_code,
         qualifications: employee.qualifications,
         work_time_factor: employee.work_time_factor,
         contract_end_date: employee.contract_end_date,
@@ -65,6 +97,7 @@ export const EmployeeForm = ({
       setFormData({
         name: '',
         seniority_level: 'Junior',
+        level_code: LEVEL_CODES.Junior,
         qualifications: [],
         work_time_factor: 1.0,
         contract_end_date: null,
@@ -74,8 +107,28 @@ export const EmployeeForm = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await onSave(formData);
-    onClose();
+    const validationErrors = validateForm();
+    
+    if (validationErrors.length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrors([]);
+
+    try {
+      await onSave(formData);
+      onClose();
+    } catch (error) {
+      if (error instanceof Error) {
+        setErrors([error.message]);
+      } else {
+        setErrors(['Ein unerwarteter Fehler ist aufgetreten']);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -85,6 +138,15 @@ export const EmployeeForm = ({
           {employee ? 'Mitarbeiter bearbeiten' : 'Neuer Mitarbeiter'}
         </DialogTitle>
         <DialogContent>
+          {errors.length > 0 && (
+            <Box sx={{ mb: 2 }}>
+              <Alert severity="error">
+                {errors.map((error, index) => (
+                  <div key={index}>{error}</div>
+                ))}
+              </Alert>
+            </Box>
+          )}
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
             <TextField
               label="Name"
@@ -107,6 +169,7 @@ export const EmployeeForm = ({
                   setFormData({
                     ...formData,
                     seniority_level: e.target.value,
+                    level_code: LEVEL_CODES[e.target.value as keyof typeof LEVEL_CODES],
                   })
                 }
               >
@@ -142,12 +205,19 @@ export const EmployeeForm = ({
               label="Arbeitszeitfaktor"
               type="number"
               value={formData.work_time_factor}
-              onChange={(e) =>
+              onChange={(e) => {
+                const value = parseFloat(e.target.value);
                 setFormData({
                   ...formData,
-                  work_time_factor: parseFloat(e.target.value),
-                })
-              }
+                  work_time_factor: value,
+                });
+                // Validate work_time_factor immediately
+                if (value <= 0 || value > 1) {
+                  setErrors(['Arbeitszeitfaktor muss zwischen 0 und 1 liegen']);
+                } else {
+                  setErrors([]);
+                }
+              }}
               required
               inputProps={{
                 min: 0.1,
@@ -179,8 +249,15 @@ export const EmployeeForm = ({
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={onClose}>Abbrechen</Button>
-          <Button type="submit" variant="contained" color="primary">
+          <Button onClick={onClose} disabled={isSubmitting}>
+            Abbrechen
+          </Button>
+          <Button 
+            type="submit" 
+            variant="contained" 
+            color="primary"
+            disabled={isSubmitting}
+          >
             Speichern
           </Button>
         </DialogActions>
