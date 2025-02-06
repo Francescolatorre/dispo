@@ -55,17 +55,20 @@ router.post('/', validateProject, async (req, res) => {
       name,
       start_date,
       end_date,
-      project_manager,
+      project_manager_id,
       documentation_links,
       status = 'active',
+      project_number = 'P' + Date.now(),
+      location = 'Default Location',
+      fte_count = 1
     } = req.body;
 
     const result = await pool.query(
       `INSERT INTO projects 
-       (name, start_date, end_date, project_manager, documentation_links, status)
-       VALUES ($1, $2, $3, $4, $5, $6)
+       (name, project_number, start_date, end_date, location, fte_count, project_manager_id, documentation_links, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
-      [name, start_date, end_date, project_manager, documentation_links, status]
+      [name, project_number, start_date, end_date, location, fte_count, project_manager_id, documentation_links, status]
     );
 
     res.status(201).json(result.rows[0]);
@@ -83,18 +86,22 @@ router.put('/:id', validateProject, async (req, res) => {
       name,
       start_date,
       end_date,
-      project_manager,
+      project_manager_id,
       documentation_links,
       status,
+      project_number = 'P' + Date.now(),
+      location = 'Default Location',
+      fte_count = 1
     } = req.body;
 
     const result = await pool.query(
       `UPDATE projects 
-       SET name = $1, start_date = $2, end_date = $3, 
-           project_manager = $4, documentation_links = $5, status = $6
-       WHERE id = $7
+       SET name = $1, project_number = $2, start_date = $3, end_date = $4,
+           location = $5, fte_count = $6, project_manager_id = $7,
+           documentation_links = $8, status = $9
+       WHERE id = $10
        RETURNING *`,
-      [name, start_date, end_date, project_manager, documentation_links, status, id]
+      [name, project_number, start_date, end_date, location, fte_count, project_manager_id, documentation_links, status, id]
     );
 
     if (result.rows.length === 0) {

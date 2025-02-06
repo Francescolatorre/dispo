@@ -1,11 +1,18 @@
 export interface Employee {
   id: number;
   name: string;
-  seniority_level: string;
+  employee_number: string;
+  entry_date: string;
+  email: string;
+  phone?: string;
+  position: string;
+  seniority_level: SeniorityLevel;
   level_code: string;
   qualifications: string[];
   work_time_factor: number;
-  contract_end_date: string | null;
+  contract_end_date?: string;
+  status: 'active' | 'inactive' | 'on_leave';
+  part_time_factor: number;
   created_at: string;
   updated_at: string;
 }

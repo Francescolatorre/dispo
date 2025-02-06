@@ -1,9 +1,13 @@
 export interface Project {
   id: number;
   name: string;
+  project_number: string;
   start_date: string;
   end_date: string;
-  project_manager: string;
+  location: string;
+  fte_count: number;
+  project_manager_id: number;
+  project_manager_name?: string; // Optional field for UI display
   documentation_links: string[];
   status: ProjectStatus;
   created_at: string;

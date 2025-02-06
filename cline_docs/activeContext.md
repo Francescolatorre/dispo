@@ -10,6 +10,7 @@
 - Material-UI implementiert und konfiguriert
 - Basis-Layout mit AppBar erstellt
 - Projektstruktur nach Best Practices organisiert
+- CI=true konfiguriert für non-watch mode tests
 
 ## Next Steps
 
@@ -46,3 +47,4 @@
 - Fokus auf MVP Features
 - Saubere Codestruktur von Anfang an
 - Dokumentation parallel zur Entwicklung
+- Test-Konfiguration: CI=true für einmalige Test-Ausführung

@@ -1,0 +1,26 @@
+{
+  "name": "DispoMVP Development",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspace",
+  "forwardPorts": [3000, 5432],
+  "postCreateCommand": "npm install",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "mtxr.sqltools",
+        "mtxr.sqltools-driver-pg"
+      ]
+    }
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {},
+    "ghcr.io/devcontainers/features/git:1": {}
+  },
+  "remoteUser": "node",
+  "postAttachCommand": {
+    "db-setup": "bash -c 'until pg_isready -h db -U postgres; do sleep 1; done && psql -h db -U postgres -d dispomvp -f src/db/init.sql'"
+  }
+}

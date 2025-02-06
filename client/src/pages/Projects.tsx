@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Box, Button } from '@mui/material';
+import { Box, Button, ToggleButton, ToggleButtonGroup } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import ViewListIcon from '@mui/icons-material/ViewList';
+import TimelineIcon from '@mui/icons-material/Timeline';
 import { ProjectList } from '../components/projects/ProjectList';
+import ProjectTimeline from '../components/projects/ProjectTimeline';
 import { ProjectForm } from '../components/projects/ProjectForm';
 import { Project, NewProject } from '../types/project';
 import { projectService } from '../services/projectService';
+import { employeeService } from '../services/employeeService';
 
 export const Projects = () => {
   const [formOpen, setFormOpen] = useState(false);
@@ -12,12 +16,30 @@ export const Projects = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'timeline'>('list');
 
   const loadProjects = async () => {
     try {
       setLoading(true);
       const data = await projectService.getAll();
-      setProjects(data);
+      
+      // Fetch project manager names
+      const projectsWithManagers = await Promise.all(
+        data.map(async (project) => {
+          try {
+            const manager = await employeeService.getById(project.project_manager_id);
+            return {
+              ...project,
+              project_manager_name: manager.name
+            };
+          } catch (err) {
+            console.error(`Failed to load manager for project ${project.id}:`, err);
+            return project;
+          }
+        })
+      );
+      
+      setProjects(projectsWithManagers);
       setError(null);
     } catch (err) {
       setError('Failed to load projects');
@@ -81,7 +103,20 @@ export const Projects = () => {
 
   return (
     <Box>
-      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
+      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <ToggleButtonGroup
+          value={viewMode}
+          exclusive
+          onChange={(_, newValue) => newValue && setViewMode(newValue)}
+          aria-label="view mode"
+        >
+          <ToggleButton value="list" aria-label="list view">
+            <ViewListIcon />
+          </ToggleButton>
+          <ToggleButton value="timeline" aria-label="timeline view">
+            <TimelineIcon />
+          </ToggleButton>
+        </ToggleButtonGroup>
         <Button
           variant="contained"
           color="primary"
@@ -96,13 +131,15 @@ export const Projects = () => {
         <div>Loading...</div>
       ) : error ? (
         <div>Error: {error}</div>
-      ) : (
+      ) : viewMode === 'list' ? (
         <ProjectList
           projects={projects}
           onEdit={handleEdit}
           onDelete={handleDelete}
           onArchive={handleArchive}
         />
+      ) : (
+        <ProjectTimeline projects={projects} />
       )}
 
       <ProjectForm

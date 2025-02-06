@@ -2,11 +2,18 @@
 CREATE TABLE IF NOT EXISTS employees (
   id SERIAL PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
+  employee_number VARCHAR(20) UNIQUE NOT NULL,
+  entry_date DATE NOT NULL,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  phone VARCHAR(20),
+  position VARCHAR(100) NOT NULL,
   seniority_level VARCHAR(50) NOT NULL,
   level_code VARCHAR(10) NOT NULL,
   qualifications TEXT[] NOT NULL DEFAULT '{}',
   work_time_factor DECIMAL(3,2) NOT NULL CHECK (work_time_factor > 0 AND work_time_factor <= 1),
   contract_end_date DATE,
+  status VARCHAR(20) NOT NULL DEFAULT 'active',
+  part_time_factor DECIMAL(5,2) NOT NULL DEFAULT 100.00 CHECK (part_time_factor BETWEEN 0.00 AND 100.00),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -34,6 +41,7 @@ CREATE TABLE IF NOT EXISTS project_assignments (
   project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   employee_id INTEGER NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
   allocation_percentage DECIMAL(5,2) NOT NULL CHECK (allocation_percentage > 0 AND allocation_percentage <= 100),
+  CONSTRAINT valid_allocation_percentage CHECK (allocation_percentage >= 0 AND allocation_percentage <= 100),
   role VARCHAR(255),
   dr_status VARCHAR(10),
   position_status VARCHAR(10),

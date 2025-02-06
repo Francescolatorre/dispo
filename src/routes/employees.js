@@ -41,22 +41,50 @@ router.post('/', validateEmployee, async (req, res) => {
   try {
     const {
       name,
+      employee_number,
+      entry_date,
+      email,
+      phone,
+      position,
       seniority_level,
       qualifications,
       work_time_factor,
-      contract_end_date
+      contract_end_date,
+      status,
+      part_time_factor
     } = req.body;
 
     const result = await db.query(
       `INSERT INTO employees (
         name,
+        employee_number,
+        entry_date,
+        email,
+        phone,
+        position,
         seniority_level,
         level_code,
         qualifications,
         work_time_factor,
-        contract_end_date
-      ) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [name, seniority_level, req.body.level_code, qualifications, work_time_factor, contract_end_date]
+        contract_end_date,
+        status,
+        part_time_factor
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
+      [
+        name,
+        employee_number,
+        entry_date,
+        email,
+        phone,
+        position,
+        seniority_level,
+        req.body.level_code,
+        qualifications,
+        work_time_factor,
+        contract_end_date,
+        status,
+        part_time_factor
+      ]
     );
 
     res.status(201).json(result.rows[0]);
@@ -86,10 +114,15 @@ router.put('/:id', validateEmployee, async (req, res) => {
            qualifications = $4,
            work_time_factor = $5,
            contract_end_date = $6,
+           email = $7,
+           phone = $8,
+           position = $9,
+           status = $10,
+           part_time_factor = $11,
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $7
+       WHERE id = $12
        RETURNING *`,
-      [name, seniority_level, req.body.level_code, qualifications, work_time_factor, contract_end_date, id]
+      [name, seniority_level, req.body.level_code, qualifications, work_time_factor, contract_end_date, email, phone, position, status, part_time_factor, id]
     );
 
     if (result.rows.length === 0) {

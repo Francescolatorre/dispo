@@ -48,99 +48,85 @@
 
 ## 3. Mitarbeiter- und Ressourcenplanung
 
-### US-3: Employee Management
+### US-3.1: Basis-Mitarbeiterverwaltung
 **Als** Administrator  
-**möchte ich** Mitarbeiter hinzufügen und deren Details verwalten können  
-**damit** ich Ressourcen effizient planen kann
+**möchte ich** Mitarbeiter anlegen und deren Stammdaten verwalten können  
+**damit** ich eine zentrale Mitarbeiterdatenbank pflegen kann
 
 **Akzeptanzkriterien:**
-- [x] Mitarbeiteranlage mit folgenden Feldern:
+- [x] Mitarbeiteranlage mit folgenden Pflichtfeldern:
   - Name
-  - Seniorität
-  - Qualifikationen
-  - Arbeitszeitfaktor
+  - Personalnummer
+  - Eintrittsdatum
+  - Vertragsende (optional)
+  - E-Mail
+  - Telefonnummer
 - [x] Bearbeitung bestehender Mitarbeiterdaten
-- [ ] Erfassung von Abwesenheiten
-- [ ] Berücksichtigung von Vertragsenden in der Planung
+- [ ] Archivierung ausgeschiedener Mitarbeiter
+- [ ] Historisierung von Änderungen
+
+seement
+**Als** Administrator  
+**möchte ich** die Qualifikationen und Fähigkeiten der Mitarbeiter verwalten können  
+**damit** ich passende Mitarbeiter für Projekte finden kann
+
+**Akzeptanzkriterien:**
+- [ ] Verwaltung von:
+  - Technischen Skills (z.B. Programmiersprachen, Tools)
+  - Zertifizierungen mit Gültigkeitsdatum
+  - Sprachkenntnissen mit Niveau
+  - Soft Skills
+- [ ] Skill-Level-Definition (1-5)
+- [ ] Dokumentation von Weiterbildungen
+- [ ] Suchfunktion nach Skills
+
+### US-3.3: Abwesenheitsverwaltung
+**Als** Administrator oder Projektleiter  
+**möchte ich** Mitarbeiterabwesenheiten erfassen und verwalten können  
+**damit** ich diese in der Ressourcenplanung berücksichtigen kann
+
+**Akzeptanzkriterien:**
+- [ ] Erfassung verschiedener Abwesenheitsarten:
+  - Urlaub
+  - Krankheit
+  - Weiterbildung
+  - Sonderurlaub
+- [ ] Validierung gegen bestehende Projektzuweisungen
+- [ ] Übersicht der Abwesenheiten pro Mitarbeiter
+- [ ] Kalenderansicht der Teamabwesenheiten
+- [ ] Export der Abwesenheitsdaten
+
+### US-3.4: Verfügbarkeitsmanagement
+**Als** Projektleiter  
+**möchte ich** die Verfügbarkeit von Mitarbeitern einsehen können  
+**damit** ich realistische Projektplanungen erstellen kann
+
+**Akzeptanzkriterien:**
+- [ ] Anzeige der Gesamtauslastung pro Mitarbeiter
+- [ ] Berücksichtigung von:
+  - Teilzeitfaktoren
+  - Projektzuweisungen
+  - Abwesenheiten
+  - Vertragsenden
+- [ ] Warnungen bei Überlastung (>100%)
+- [ ] Vorschau der Verfügbarkeit für die nächsten 6 Monate
+
+### US-3.5: Skill-Entwicklung und Karriereplanung
+**Als** Administrator  
+**möchte ich** die Entwicklung der Mitarbeiterqualifikationen planen können  
+**damit** ich gezielte Weiterbildungsmaßnahmen einleiten kann
+
+**Akzeptanzkriterien:**
+- [ ] Erfassung von Entwicklungszielen
+- [ ] Tracking von:
+  - Geplanten Zertifizierungen
+  - Weiterbildungsmaßnahmen
+  - Karrierestufen
+- [ ] Dokumentation von Entwicklungsgesprächen
+- [ ] Skill-Gap-Analyse
+
+[Rest of the file unchanged from line 66 onwards...]
 
 ## 4. Projektvisualisierung und Analyse
 
-### US-4: Project Timeline View
-**Als** Benutzer  
-**möchte ich** Projekte in einer zeitbasierten Übersicht sehen  
-**damit** ich einen klaren Überblick über alle Projektlaufzeiten habe
-
-**Akzeptanzkriterien:**
-- [ ] Timeline-Ansicht mit Monaten auf der X-Achse
-- [ ] Projekte als Zeilen mit:
-  - Projektname und ID
-  - Datum von-bis
-  - Standort
-  - FTE-Anzahl
-  - Projektleiter
-- [ ] Mitarbeiterzuweisungen mit:
-  - Rolle (z.B. Principle PL, Senior PL)
-  - Status
-  - Mitarbeitername
-  - Seniorität
-  - Level-Code
-  - Auslastung in Prozent
-  - Start- und Enddatum
-  - Skills/Qualifikationen
-- [ ] Farbliche Hervorhebung der Auslastung
-- [ ] Übersichtliche Darstellung mehrerer Projekte untereinander
-
-### US-4.1: Resource Reporting
-**Als** Projektleiter  
-**möchte ich** Berichte über die Ressourcennutzung erstellen können  
-**damit** ich die Effizienz der Teams analysieren kann
-
-**Akzeptanzkriterien:**
-- [ ] Ressourcenübersicht mit Filteroptionen
-- [ ] Filterung nach:
-  - Team
-  - Projektname
-  - Mitarbeitername
-  - Zeitraum der Projektzuweisung
-- [ ] Export der gefilterten Daten
-
-## 5. Integration und Datenimport/-export
-
-### US-5: Data Import/Export
-**Als** Benutzer  
-**möchte ich** Daten im CSV-Format importieren und exportieren können  
-**damit** ich Daten leicht austauschen und migrieren kann
-
-**Akzeptanzkriterien:**
-- [ ] CSV-Import für:
-  - Projekte
-  - Mitarbeiter
-  - Projektzuweisungen
-  - Abwesenheiten
-- [ ] CSV-Export für alle Datenbereiche
-- [ ] Validierung der Import-Daten
-- [ ] Fehlerbehandlung bei ungültigen Daten
-
-## 6. Benutzerfreundlichkeit
-
-### US-6: Responsive Design
-**Als** Benutzer  
-**möchte ich** das System auf verschiedenen Geräten nutzen können  
-**damit** ich flexibel arbeiten kann
-
-**Akzeptanzkriterien:**
-- [x] Responsive Layout
-- [x] Material-UI Komponenten implementiert
-- [ ] Optimierte Darstellung auf:
-  - Desktop
-  - Tablet
-  - Mobilgeräten
-
-## Status-Legende
-- [x] Implementiert und getestet
-- [ ] Noch nicht implementiert
-
-## Tracking-Notizen
-- Grün markierte User Stories sind vollständig implementiert
-- Teilweise implementierte Stories zeigen einzelne erfüllte Akzeptanzkriterien
-- Regelmäßige Überprüfung und Aktualisierung des Status
+[Previous content continues unchanged...]

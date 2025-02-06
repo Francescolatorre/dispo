@@ -1,0 +1,104 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Employee",
+  "description": "Employee model with core attributes only - derived values like capacity are calculated on demand",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "integer",
+      "description": "Unique identifier for the employee",
+      "readOnly": true
+    },
+    "name": {
+      "type": "string",
+      "description": "Full name of the employee",
+      "minLength": 2,
+      "maxLength": 255
+    },
+    "entry_date": {
+      "type": "string",
+      "description": "Date when employee joined the company",
+      "format": "date",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "email": {
+      "type": "string",
+      "description": "Employee's email address",
+      "format": "email",
+      "pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+      "maxLength": 255
+    },
+    "phone": {
+      "type": "string",
+      "description": "Employee's phone number",
+      "maxLength": 20,
+      "nullable": true
+    },
+    "seniority_level": {
+      "type": "string",
+      "description": "Employee's seniority level",
+      "enum": ["Junior", "Mid", "Senior", "Lead"],
+      "maxLength": 50
+    },
+    "qualifications": {
+      "type": "array",
+      "description": "List of employee qualifications",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "contract_end_date": {
+      "type": "string",
+      "description": "End date of employment contract if temporary",
+      "format": "date",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "nullable": true
+    },
+    "status": {
+      "type": "string",
+      "description": "Current employment status",
+      "enum": ["active", "inactive", "on_leave"],
+      "default": "active",
+      "maxLength": 20
+    },
+    "created_at": {
+      "type": "string",
+      "description": "Timestamp of record creation",
+      "format": "date-time",
+      "readOnly": true
+    },
+    "updated_at": {
+      "type": "string",
+      "description": "Timestamp of last update",
+      "format": "date-time",
+      "readOnly": true
+    }
+  },
+  "required": [
+    "name",
+    "entry_date",
+    "email",
+    "seniority_level",
+    "qualifications"
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "NewEmployee": {
+      "allOf": [
+        { "$ref": "#" },
+        {
+          "type": "object",
+          "properties": {
+            "id": false,
+            "created_at": false,
+            "updated_at": false
+          }
+        }
+      ]
+    },
+    "UpdateEmployee": {
+      "$ref": "#/definitions/NewEmployee"
+    }
+  }
+}

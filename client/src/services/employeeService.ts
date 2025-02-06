@@ -18,12 +18,19 @@ export const employeeService = {
   },
 
   create: async (employee: Omit<Employee, 'id' | 'created_at' | 'updated_at'>): Promise<Employee> => {
+    const payload = {
+      ...employee,
+      entry_date: employee.entry_date,
+      employee_number: employee.employee_number,
+      part_time_factor: employee.part_time_factor / 100
+    };
+    
     const response = await fetch('/api/employees', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(employee),
+      body: JSON.stringify(payload),
     });
     if (!response.ok) {
       throw new Error('Failed to create employee');

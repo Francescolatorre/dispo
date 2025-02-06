@@ -1,0 +1,108 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ProjectAssignment",
+  "description": "Project assignment model tracking employee assignments to projects, including historical assignments",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "integer",
+      "description": "Unique identifier for the assignment",
+      "readOnly": true
+    },
+    "project_id": {
+      "type": "integer",
+      "description": "ID of the project",
+      "minimum": 1
+    },
+    "requirement_id": {
+      "type": "integer",
+      "description": "ID of the project requirement this fulfills",
+      "minimum": 1
+    },
+    "employee_id": {
+      "type": "integer",
+      "description": "ID of the assigned employee",
+      "minimum": 1
+    },
+    "role": {
+      "type": "string",
+      "description": "Employee's role in the project",
+      "maxLength": 255
+    },
+    "dr_status": {
+      "type": "string",
+      "description": "Development responsibility status",
+      "maxLength": 10,
+      "nullable": true
+    },
+    "position_status": {
+      "type": "string",
+      "description": "Position status in the project",
+      "maxLength": 10,
+      "nullable": true
+    },
+    "start_date": {
+      "type": "string",
+      "description": "Assignment start date",
+      "format": "date",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "end_date": {
+      "type": "string",
+      "description": "Assignment end date",
+      "format": "date",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "status": {
+      "type": "string",
+      "description": "Status of this assignment",
+      "enum": ["active", "completed", "terminated"],
+      "default": "active"
+    },
+    "termination_reason": {
+      "type": "string",
+      "description": "Reason if assignment was terminated early",
+      "maxLength": 1000,
+      "nullable": true
+    },
+    "created_at": {
+      "type": "string",
+      "description": "Timestamp of record creation",
+      "format": "date-time",
+      "readOnly": true
+    },
+    "updated_at": {
+      "type": "string",
+      "description": "Timestamp of last update",
+      "format": "date-time",
+      "readOnly": true
+    }
+  },
+  "required": [
+    "project_id",
+    "requirement_id",
+    "employee_id",
+    "role",
+    "start_date",
+    "end_date"
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "NewProjectAssignment": {
+      "allOf": [
+        { "$ref": "#" },
+        {
+          "type": "object",
+          "properties": {
+            "id": false,
+            "created_at": false,
+            "updated_at": false
+          }
+        }
+      ]
+    },
+    "UpdateProjectAssignment": {
+      "$ref": "#/definitions/NewProjectAssignment"
+    }
+  }
+}

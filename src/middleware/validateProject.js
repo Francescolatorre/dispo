@@ -1,5 +1,15 @@
 const validateProject = (req, res, next) => {
-  const { name, start_date, end_date, project_manager, documentation_links, status } = req.body;
+  const { 
+    name, 
+    start_date, 
+    end_date, 
+    project_manager_id, 
+    documentation_links, 
+    status,
+    project_number,
+    location,
+    fte_count 
+  } = req.body;
 
   const errors = [];
 
@@ -8,9 +18,24 @@ const validateProject = (req, res, next) => {
     errors.push('Name must be at least 2 characters long');
   }
 
-  // Validate project manager
-  if (!project_manager || typeof project_manager !== 'string' || project_manager.trim().length < 2) {
-    errors.push('Project manager name must be at least 2 characters long');
+  // Validate project manager ID
+  if (!project_manager_id || !Number.isInteger(project_manager_id) || project_manager_id < 1) {
+    errors.push('Valid project manager ID is required');
+  }
+
+  // Validate project number if provided
+  if (project_number && (typeof project_number !== 'string' || project_number.trim().length < 1)) {
+    errors.push('Project number must be a non-empty string');
+  }
+
+  // Validate location if provided
+  if (location && (typeof location !== 'string' || location.trim().length < 1)) {
+    errors.push('Location must be a non-empty string');
+  }
+
+  // Validate FTE count if provided
+  if (fte_count && (!Number.isInteger(fte_count) || fte_count < 1)) {
+    errors.push('FTE count must be a positive integer');
   }
 
   // Validate dates

@@ -14,7 +14,7 @@ import {
   Autocomplete,
   Box,
 } from '@mui/material';
-import { Employee, SENIORITY_LEVELS, LEVEL_CODES, NewEmployee } from '../../types/employee';
+import { Employee, SENIORITY_LEVELS, LEVEL_CODES, NewEmployee, SeniorityLevel } from '../../types/employee';
 
 const COMMON_QUALIFICATIONS = [
   'JavaScript',
@@ -47,11 +47,18 @@ export const EmployeeForm = ({
 }: EmployeeFormProps) => {
   const [formData, setFormData] = useState<NewEmployee>({
     name: '',
+    employee_number: '',
+    entry_date: new Date().toISOString().split('T')[0],
+    email: '',
+    phone: '',
+    position: '',
     seniority_level: 'Junior',
     level_code: LEVEL_CODES.Junior,
     qualifications: [],
-    work_time_factor: 1.0,
-    contract_end_date: null,
+    work_time_factor: 100, // Represents 100%
+    contract_end_date: undefined,
+    status: 'active',
+    part_time_factor: 100
   });
   const [errors, setErrors] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -63,14 +70,18 @@ export const EmployeeForm = ({
       validationErrors.push('Name muss mindestens 2 Zeichen lang sein');
     }
 
+    if (!formData.seniority_level || !SENIORITY_LEVELS.includes(formData.seniority_level)) {
+      validationErrors.push('Ungültige Seniorität');
+    }
+
     if (!formData.qualifications || formData.qualifications.length === 0) {
       validationErrors.push('Mindestens eine Qualifikation ist erforderlich');
     }
 
-    if (typeof formData.work_time_factor !== 'number' || 
-        formData.work_time_factor < 0.1 || 
-        formData.work_time_factor > 1.0) {
-      validationErrors.push('Arbeitszeitfaktor muss zwischen 0 und 1 liegen');
+    if (typeof formData.work_time_factor !== 'number' ||
+        formData.work_time_factor < 0 ||
+        formData.work_time_factor > 100) {
+      validationErrors.push('Arbeitszeitfaktor muss zwischen 0 und 100 liegen');
     }
 
     if (formData.contract_end_date) {
@@ -86,21 +97,25 @@ export const EmployeeForm = ({
   useEffect(() => {
     if (employee) {
       setFormData({
-        name: employee.name,
-        seniority_level: employee.seniority_level,
-        level_code: employee.level_code,
-        qualifications: employee.qualifications,
-        work_time_factor: employee.work_time_factor,
-        contract_end_date: employee.contract_end_date,
+        ...employee,
+        entry_date: employee.entry_date || new Date().toISOString().split('T')[0],
+        part_time_factor: employee.part_time_factor || 100,
       });
     } else {
       setFormData({
         name: '',
+        employee_number: '',
+        entry_date: new Date().toISOString().split('T')[0],
+        email: '',
+        phone: '',
+        position: '',
         seniority_level: 'Junior',
         level_code: LEVEL_CODES.Junior,
         qualifications: [],
-        work_time_factor: 1.0,
-        contract_end_date: null,
+        work_time_factor: 100,
+        contract_end_date: undefined,
+        status: 'active',
+        part_time_factor: 100
       });
     }
     setErrors([]);
@@ -152,9 +167,48 @@ export const EmployeeForm = ({
             <TextField
               label="Name"
               value={formData.name}
-              onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
+              fullWidth
+            />
+
+            <TextField
+              label="Personalnummer"
+              value={formData.employee_number}
+              onChange={(e) => setFormData({ ...formData, employee_number: e.target.value })}
+              required
+              fullWidth
+            />
+
+            <TextField
+              label="Eintrittsdatum"
+              type="date"
+              value={formData.entry_date}
+              onChange={(e) => setFormData({ ...formData, entry_date: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+              fullWidth
+            />
+
+            <TextField
+              label="E-Mail"
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              required
+              fullWidth
+            />
+
+            <TextField
+              label="Telefonnummer"
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              fullWidth
+            />
+
+            <TextField
+              label="Position"
+              value={formData.position}
+              onChange={(e) => setFormData({ ...formData, position: e.target.value })}
               required
               fullWidth
             />
@@ -169,7 +223,7 @@ export const EmployeeForm = ({
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    seniority_level: e.target.value,
+                    seniority_level: e.target.value as SeniorityLevel,
                     level_code: LEVEL_CODES[e.target.value as keyof typeof LEVEL_CODES],
                   })
                 }
@@ -203,11 +257,11 @@ export const EmployeeForm = ({
             />
 
             <TextField
-              label="Arbeitszeitfaktor"
+              label="Arbeitszeitfaktor (%)"
               type="number"
               value={formData.work_time_factor}
               onChange={(e) => {
-                const value = parseFloat(e.target.value);
+                const value = parseInt(e.target.value, 10);
                 setFormData({
                   ...formData,
                   work_time_factor: value,
@@ -215,9 +269,9 @@ export const EmployeeForm = ({
               }}
               required
               inputProps={{
-                min: 0.1,
-                max: 1.0,
-                step: 0.1,
+                min: 0,
+                max: 100,
+                step: 1,
               }}
             />
 
@@ -234,7 +288,7 @@ export const EmployeeForm = ({
               onChange={(e) =>
                 setFormData({
                   ...formData,
-                  contract_end_date: e.target.value || null,
+                  contract_end_date: e.target.value || undefined,
                 })
               }
               InputLabelProps={{

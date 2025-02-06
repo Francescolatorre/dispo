@@ -1,0 +1,136 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ProjectRequirement",
+  "description": "Project staffing requirements that can be filled by multiple assignments over time",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "integer",
+      "description": "Unique identifier for the requirement",
+      "readOnly": true
+    },
+    "project_id": {
+      "type": "integer",
+      "description": "ID of the project",
+      "minimum": 1
+    },
+    "role": {
+      "type": "string",
+      "description": "Required role for the position",
+      "maxLength": 255
+    },
+    "seniority_level": {
+      "type": "string",
+      "description": "Required seniority level",
+      "enum": ["Junior", "Mid", "Senior", "Lead"],
+      "maxLength": 50
+    },
+    "required_qualifications": {
+      "type": "array",
+      "description": "List of required qualifications",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "start_date": {
+      "type": "string",
+      "description": "When this role is needed from",
+      "format": "date",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "end_date": {
+      "type": "string",
+      "description": "When this role is needed until",
+      "format": "date",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "status": {
+      "type": "string",
+      "description": "Current status of this requirement",
+      "enum": ["open", "partially_filled", "filled", "needs_replacement"],
+      "default": "open"
+    },
+    "priority": {
+      "type": "string",
+      "description": "Priority level for filling this requirement",
+      "enum": ["low", "medium", "high", "critical"],
+      "default": "medium"
+    },
+    "coverage_needed": {
+      "type": "object",
+      "description": "Time periods where coverage is still needed",
+      "properties": {
+        "periods": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "start_date": {
+                "type": "string",
+                "format": "date",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "end_date": {
+                "type": "string",
+                "format": "date",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              }
+            },
+            "required": ["start_date", "end_date"]
+          }
+        }
+      }
+    },
+    "notes": {
+      "type": "string",
+      "description": "Additional requirements or notes",
+      "maxLength": 1000,
+      "nullable": true
+    },
+    "current_assignment_id": {
+      "type": "integer",
+      "description": "ID of the current active assignment fulfilling this requirement",
+      "nullable": true
+    },
+    "created_at": {
+      "type": "string",
+      "description": "Timestamp of record creation",
+      "format": "date-time",
+      "readOnly": true
+    },
+    "updated_at": {
+      "type": "string",
+      "description": "Timestamp of last update",
+      "format": "date-time",
+      "readOnly": true
+    }
+  },
+  "required": [
+    "project_id",
+    "role",
+    "seniority_level",
+    "start_date",
+    "end_date"
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "NewProjectRequirement": {
+      "allOf": [
+        { "$ref": "#" },
+        {
+          "type": "object",
+          "properties": {
+            "id": false,
+            "current_assignment_id": false,
+            "created_at": false,
+            "updated_at": false
+          }
+        }
+      ]
+    },
+    "UpdateProjectRequirement": {
+      "$ref": "#/definitions/NewProjectRequirement"
+    }
+  }
+}

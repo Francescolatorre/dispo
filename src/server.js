@@ -4,6 +4,8 @@ require('dotenv').config();
 const db = require('./config/database');
 const employeesRouter = require('./routes/employees');
 const projectsRouter = require('./routes/projects');
+const requirementsRouter = require('./routes/requirements');
+const assignmentsRouter = require('./routes/assignments');
 
 const app = express();
 
@@ -14,6 +16,8 @@ app.use(express.json());
 // Routes
 app.use('/api/employees', employeesRouter);
 app.use('/api/projects', projectsRouter);
+app.use('/api/requirements', requirementsRouter);
+app.use('/api/assignments', assignmentsRouter);
 
 // Basic route for testing
 app.get('/', (req, res) => {

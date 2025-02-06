@@ -1,68 +1,40 @@
 # Technical Context
 
-## Technology Stack
+## Development Environment
+- Operating System: Windows 11
+- Default Terminal: PowerShell
+- IDE: Visual Studio Code
+- Working Directory: c:/DEVELOPMENT/projects/DispoMVP
 
-### Backend
-- **Framework:** Node.js mit Express
-- **API:** RESTful Architecture
-- **Datenbank:** PostgreSQL
-- **Sicherheit:** bcrypt.js für Passwort-Hashing
+## Frontend Technologies
+- React with TypeScript
+- Material-UI for components
+- Vite for build tooling
+- Vitest for testing
+- React Testing Library
 
-### Frontend
-- **Framework:** React
-- **UI Library:** Material-UI
-- **CSV Handling:** Papa Parse
+## Backend Technologies
+- Node.js
+- Express
+- PostgreSQL
+- Jest for testing
 
-### Deployment
-- **Platform:** Heroku
-- **Documentation:** Swagger (OpenAPI)
+## Testing Setup
+- Frontend: Vitest + React Testing Library
+- Backend: Jest
+- E2E: Playwright
 
-## Development Setup
+## Development Workflow
+- Local development using PowerShell as default terminal
+- npm for package management
+- Git for version control
 
-### Prerequisites
-- Node.js und npm
-- PostgreSQL Datenbank
-- Git für Versionskontrolle
+## Important Paths
+- Frontend: /client
+- Backend: /src
+- Database: /src/db
+- Documentation: /cline_docs
+- Meta Models: /meta/schemas
 
-### Local Development
-1. Backend und Frontend Server starten
-2. PostgreSQL Datenbank einrichten
-3. Environment Variablen konfigurieren
-4. API-Tests mit Swagger durchführen
-
-## Technical Constraints
-
-### Security
-- HTTPS Verschlüsselung
-- Sichere Passwort-Speicherung
-- Best Practices für Web Security
-
-### Performance
-- Optimierte Datenbankabfragen
-- Effiziente Frontend-Komponenten
-- Responsive Design für alle Geräte
-
-### Scalability
-- Horizontale Skalierung durch Heroku
-- Modulare Architektur
-- Erweiterbare API-Struktur
-
-### Data Management
-- CSV Import/Export Funktionalität
-- Datenbank-Backup Strategien
-- Datenvalidierung und Fehlerbehandlung
-
-## Integration Points
-
-### Current
-- CSV Datei Import/Export
-- PostgreSQL Datenbank
-
-### Planned
-- Schnittstelle für Mitarbeiterstammdaten
-- Weitere Export-Formate
-
-## Technical Debt Considerations
-- Keine E-Mail-Integration
-- Begrenzte Zugriffskontrollen
-- Einfache Authentifizierung ohne Passwort-Reset
+## Environment Variables
+- See .env.example for required configuration

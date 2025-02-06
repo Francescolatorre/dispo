@@ -127,4 +127,92 @@ test.describe('Projects', () => {
     // Wait for error message with increased timeout
     await expect(page.getByText('Failed to load projects')).toBeVisible({ timeout: 10000 });
   });
+
+  test.describe('Timeline View', () => {
+    test('should toggle between list and timeline views', async ({ page }) => {
+      // Initially in list view
+      await expect(page.getByRole('table')).toBeVisible();
+
+      // Wait for data to load and switch to timeline view
+      await expect(page.getByRole('table')).toBeVisible();
+      await page.getByRole('button', { name: 'timeline view' }).click();
+      await expect(page.getByRole('table')).not.toBeVisible();
+      await page.waitForTimeout(1000); // Wait for timeline to render
+      await expect(page.locator('.MuiBox-root').filter({ hasText: /Jan\.|Feb\.|März/ })).toBeVisible();
+
+      // Switch back to list view
+      await page.getByRole('button', { name: 'list view' }).click();
+      await expect(page.getByRole('table')).toBeVisible();
+    });
+
+    test('should display projects in timeline', async ({ page }) => {
+      const testProject = {
+        id: 1,
+        name: 'Test Timeline Project',
+        project_number: 'P' + Date.now(),
+        start_date: '2025-02-05',
+        end_date: '2025-12-31',
+        location: 'Test Location',
+        fte_count: 1,
+        project_manager_id: 1,
+        status: 'active',
+        documentation_links: ['https://example.com/docs'],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      // Mock API to return project manager
+      await page.route('**/api/employees/1', async (route) => {
+        await route.fulfill({ 
+          json: {
+            id: 1,
+            name: 'Test Manager',
+            seniority_level: 'Senior',
+            level_code: 'S1',
+            qualifications: ['Project Management'],
+            work_time_factor: 1.0
+          }
+        });
+      });
+
+      // Mock API to return test project
+      await page.route('**/api/projects', async (route) => {
+        await route.fulfill({ json: [testProject] });
+      });
+      await page.reload();
+      await waitForTableLoad(page);
+
+      // Wait for data to load and switch to timeline view
+      await expect(page.getByRole('table')).toBeVisible();
+      await page.getByRole('button', { name: 'timeline view' }).click();
+      await page.waitForTimeout(1000); // Wait for timeline to render
+
+      // Verify month scale is visible
+      const monthScale = page.locator('.MuiBox-root').filter({ hasText: /Feb\. 2025/ });
+      await expect(monthScale).toBeVisible();
+
+      // Verify project bar is visible
+      const projectBar = page.locator('.MuiPaper-root').filter({ hasText: testProject.name });
+      await expect(projectBar).toBeVisible();
+
+      // Hover over project bar to show tooltip
+      await projectBar.hover();
+      await expect(page.getByText('Test Manager')).toBeVisible();
+      await expect(page.getByText('05.02.2025 - 31.12.2025')).toBeVisible();
+    });
+
+    test('should handle empty state in timeline view', async ({ page }) => {
+      // Route to return empty projects array
+      await page.route('**/api/projects', async (route) => {
+        await route.fulfill({ json: [] });
+      });
+      await page.reload();
+
+      // Switch to timeline view
+      await page.getByRole('button', { name: 'timeline view' }).click();
+
+      // Verify empty state message
+      await expect(page.getByText('No projects to display')).toBeVisible();
+    });
+  });
 });
