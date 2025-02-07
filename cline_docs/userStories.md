@@ -8,10 +8,22 @@
 **damit** sie auf das System zugreifen können
 
 **Akzeptanzkriterien:**
-- [ ] Formular zur Benutzeranlage mit Feldern für Benutzername und Passwort
-- [ ] Erfolgreiche Benutzeranlage ermöglicht Login
-- [ ] Keine Passwort-Wiederherstellungsfunktion implementiert
-- [ ] Validierung der Eingabefelder
+- [ ] Benutzeranlage-Formular enthält:
+  - Username (required, min 3 chars, alphanumeric)
+  - Password (required, min 8 chars, 1 uppercase, 1 number, 1 special char)
+  - Role selection (required, "admin" or "project_leader")
+- [ ] System validiert:
+  - Username-Uniqueness in Echtzeit
+  - Passwort-Komplexität während der Eingabe
+  - Vollständigkeit aller Pflichtfelder
+- [ ] Nach erfolgreicher Anlage:
+  - Benutzer erhält Bestätigungs-Email
+  - Benutzer kann sich sofort einloggen
+  - Admin sieht Erfolgsmeldung
+- [ ] Bei Fehlern:
+  - Formular behält eingegebene Daten (außer Passwort)
+  - Spezifische Fehlermeldungen pro Feld
+  - Keine Benutzeranlage bei Validierungsfehlern
 
 ## 2. Projektmanagement
 
@@ -21,16 +33,24 @@
 **damit** ich den Projektstatus und relevante Informationen verfolgen kann
 
 **Akzeptanzkriterien:**
-- [x] Projektanlage mit folgenden Pflichtfeldern:
-  - Name
-  - Start-Datum
-  - End-Datum
-  - Projektleiter (muss existierender Mitarbeiter sein)
-  - Links zu Dokumentation
-- [x] Projektleiter wird automatisch als Projektmitglied hinzugefügt
-- [x] Bearbeitung bestehender Projekte
-- [x] Archivierungsfunktion für abgeschlossene Projekte
-- [x] Archivierte Projekte sind separat abrufbar
+- [x] Projektanlage-Formular validiert:
+  - Name (required, unique, 3-50 chars)
+  - Start-Datum (required, nicht in Vergangenheit)
+  - End-Datum (required, nach Start-Datum)
+  - Projektleiter (required, Dropdown mit aktiven Mitarbeitern)
+  - Dokumentations-Links (optional, gültige URLs)
+- [x] Bei Projektanlage:
+  - System prüft Verfügbarkeit des Projektleiters
+  - Automatische Zuweisung des Projektleiters mit 20% Mindestauslastung
+  - Projekt erscheint sofort in Projektübersicht
+- [x] Bearbeitung existierender Projekte:
+  - Änderungshistorie wird protokolliert
+  - Keine Kürzung der Projektlaufzeit bei existierenden Zuweisungen
+  - Email-Benachrichtigung an Projektleiter bei Änderungen
+- [x] Archivierungsprozess:
+  - Nur möglich wenn alle Zuweisungen beendet
+  - Archivierte Projekte in separater Ansicht
+  - Wiederherstellung möglich durch Admin
 
 ### US-2.1: Project Resource Assignment
 **Als** Projektleiter  
@@ -38,13 +58,19 @@
 **damit** ich die Ressourcenplanung effektiv verwalten kann
 
 **Akzeptanzkriterien:**
-- [ ] Mitarbeiterzuweisung zu Projekten mit:
-  - Start-Datum (muss innerhalb Projektlaufzeit liegen)
-  - End-Datum (muss innerhalb Projektlaufzeit liegen)
-  - Auslastung in Prozent
-- [ ] Ein Mitarbeiter kann mehreren Projekten gleichzeitig zugewiesen sein
-- [ ] Ein Projekt kann mehrere Mitarbeiter haben
-- [ ] Validierung der Zuweisungszeiträume gegen Projektlaufzeit
+- [ ] Zuweisungsformular validiert:
+  - Start-Datum (innerhalb Projektlaufzeit)
+  - End-Datum (innerhalb Projektlaufzeit)
+  - Auslastung (10-100%, in 10er Schritten)
+  - Keine Überschneidung mit Abwesenheiten
+- [ ] Mehrfachzuweisungen:
+  - System prüft Gesamtauslastung ≤ 100%
+  - Warnung bei > 80% Auslastung
+  - Übersicht aller Zuweisungen des Mitarbeiters
+- [ ] Änderungen an Zuweisungen:
+  - Protokollierung aller Änderungen
+  - Email-Benachrichtigung an betroffene Mitarbeiter
+  - Keine rückwirkenden Änderungen erlaubt
 
 ## 3. Mitarbeiter- und Ressourcenplanung
 
@@ -54,31 +80,60 @@
 **damit** ich eine zentrale Mitarbeiterdatenbank pflegen kann
 
 **Akzeptanzkriterien:**
-- [x] Mitarbeiteranlage mit folgenden Pflichtfeldern:
-  - Name
-  - Personalnummer
-  - Eintrittsdatum
-  - Vertragsende (optional)
-  - E-Mail
-  - Telefonnummer
-- [x] Bearbeitung bestehender Mitarbeiterdaten
-- [ ] Archivierung ausgeschiedener Mitarbeiter
-- [ ] Historisierung von Änderungen
+- [x] Mitarbeiteranlage validiert:
+  - Name (required, 2-50 chars)
+  - Personalnummer (required, unique, Format: "EMP-YYYY-XXXX")
+  - Eintrittsdatum (required, nicht in Zukunft)
+  - Vertragsende (optional, nach Eintrittsdatum)
+  - E-Mail (required, gültiges Format, Firmen-Domain)
+  - Telefonnummer (required, gültiges Format)
+- [x] Bei Änderungen:
+  - Automatische Versionierung aller Änderungen
+  - Protokollierung von Bearbeiter und Zeitpunkt
+  - Email-Benachrichtigung an Personalwesen
+- [ ] Archivierungsprozess:
+  - Automatisch bei Erreichen des Vertragsendes
+  - Manuelle Archivierung mit Begründung möglich
+  - Archivierte Mitarbeiter in separater Ansicht
+- [ ] Daten-Export:
+  - PDF-Export der Mitarbeiterdaten
+  - Excel-Export für Massendatenverarbeitung
+  - Filterung nach aktiv/archiviert
 
-seement
+### US-3.2: Qualifikationsmanagement
 **Als** Administrator  
 **möchte ich** die Qualifikationen und Fähigkeiten der Mitarbeiter verwalten können  
 **damit** ich passende Mitarbeiter für Projekte finden kann
 
 **Akzeptanzkriterien:**
-- [ ] Verwaltung von:
-  - Technischen Skills (z.B. Programmiersprachen, Tools)
-  - Zertifizierungen mit Gültigkeitsdatum
-  - Sprachkenntnissen mit Niveau
-  - Soft Skills
-- [ ] Skill-Level-Definition (1-5)
-- [ ] Dokumentation von Weiterbildungen
-- [ ] Suchfunktion nach Skills
+- [ ] Qualifikationserfassung:
+  - Technische Skills:
+    * Name (aus vordefinierter Liste)
+    * Level (1-5, mit Beschreibung pro Level)
+    * Erfahrung in Jahren
+    * Letzter Einsatz
+  - Zertifizierungen:
+    * Name (aus vordefinierter Liste)
+    * Ausstellungsdatum
+    * Ablaufdatum
+    * PDF-Upload des Zertifikats
+  - Sprachkenntnisse:
+    * Sprache (aus ISO-Liste)
+    * Niveau (A1-C2)
+    * Zertifikat (optional)
+  - Soft Skills:
+    * Kategorie (aus vordefinierter Liste)
+    * Bewertung (1-5)
+    * Bemerkungen
+- [ ] Skill-Matching:
+  - Suchfunktion nach einzelnen/kombinierten Skills
+  - Filterung nach Skill-Level
+  - Berücksichtigung von Zertifikatsablauf
+  - Export der Suchergebnisse
+- [ ] Weiterbildungsplanung:
+  - Dokumentation geplanter Schulungen
+  - Tracking von Zertifikatserneuerungen
+  - Automatische Erinnerungen vor Ablauf
 
 ### US-3.3: Abwesenheitsverwaltung
 **Als** Administrator oder Projektleiter  
@@ -86,15 +141,23 @@ seement
 **damit** ich diese in der Ressourcenplanung berücksichtigen kann
 
 **Akzeptanzkriterien:**
-- [ ] Erfassung verschiedener Abwesenheitsarten:
-  - Urlaub
-  - Krankheit
-  - Weiterbildung
-  - Sonderurlaub
-- [ ] Validierung gegen bestehende Projektzuweisungen
-- [ ] Übersicht der Abwesenheiten pro Mitarbeiter
-- [ ] Kalenderansicht der Teamabwesenheiten
-- [ ] Export der Abwesenheitsdaten
+- [ ] Abwesenheitserfassung validiert:
+  - Typ (required, aus Liste: Urlaub/Krankheit/Weiterbildung/Sonderurlaub)
+  - Zeitraum (Start/Ende, keine Überlappung)
+  - Begründung (required für Sonderurlaub)
+  - Vertretung (optional, muss verfügbar sein)
+- [ ] Systemprüfungen:
+  - Keine Überschneidung mit 100% Projektzuweisung
+  - Urlaubskonto wird automatisch aktualisiert
+  - Benachrichtigung an Projektleiter betroffener Projekte
+- [ ] Visualisierung:
+  - Kalenderansicht mit Farbkodierung nach Typ
+  - Teamübersicht mit Filtern
+  - Export für Zeiterfassungssystem
+- [ ] Reporting:
+  - Abwesenheitsstatistiken pro Mitarbeiter/Team
+  - Urlaubskontostand
+  - Krankheitsquote
 
 ### US-3.4: Verfügbarkeitsmanagement
 **Als** Projektleiter  
@@ -102,14 +165,23 @@ seement
 **damit** ich realistische Projektplanungen erstellen kann
 
 **Akzeptanzkriterien:**
-- [ ] Anzeige der Gesamtauslastung pro Mitarbeiter
-- [ ] Berücksichtigung von:
-  - Teilzeitfaktoren
-  - Projektzuweisungen
-  - Abwesenheiten
-  - Vertragsenden
-- [ ] Warnungen bei Überlastung (>100%)
-- [ ] Vorschau der Verfügbarkeit für die nächsten 6 Monate
+- [ ] Verfügbarkeitsanzeige:
+  - Tagesgenau für die nächsten 6 Monate
+  - Prozentuale Auslastung pro Woche
+  - Farbkodierung (grün ≤70%, gelb ≤90%, rot >90%)
+- [ ] Berechnungsfaktoren:
+  - Teilzeitfaktor wird korrekt einberechnet
+  - Projektzuweisungen werden summiert
+  - Abwesenheiten werden berücksichtigt
+  - Vertragsende wird markiert
+- [ ] Warnungen:
+  - Email bei Überlastung >100%
+  - Markierung bei Vertragsende in nächsten 3 Monaten
+  - Hinweis auf lange Abwesenheiten
+- [ ] Planungstools:
+  - "Was-wäre-wenn" Simulation neuer Zuweisungen
+  - Team-Kapazitätsplanung
+  - Export der Auslastungsdaten
 
 ### US-3.5: Skill-Entwicklung und Karriereplanung
 **Als** Administrator  
@@ -117,16 +189,43 @@ seement
 **damit** ich gezielte Weiterbildungsmaßnahmen einleiten kann
 
 **Akzeptanzkriterien:**
-- [ ] Erfassung von Entwicklungszielen
-- [ ] Tracking von:
-  - Geplanten Zertifizierungen
-  - Weiterbildungsmaßnahmen
-  - Karrierestufen
-- [ ] Dokumentation von Entwicklungsgesprächen
-- [ ] Skill-Gap-Analyse
-
-[Rest of the file unchanged from line 66 onwards...]
+- [ ] Entwicklungsziele:
+  - SMART-Kriterien für jedes Ziel
+  - Zeitplan mit Meilensteinen
+  - Verknüpfung mit Weiterbildungsmaßnahmen
+  - Status-Tracking
+- [ ] Maßnahmentracking:
+  - Geplante Zertifizierungen mit Terminen
+  - Budgetierung von Weiterbildungen
+  - Erfolgsquote der Maßnahmen
+  - Feedback-Erfassung
+- [ ] Karriereentwicklung:
+  - Definition von Karrierepfaden
+  - Skill-Gap-Analyse mit Soll/Ist-Vergleich
+  - Automatische Vorschläge für Weiterbildungen
+- [ ] Reporting:
+  - Entwicklungsfortschritt pro Mitarbeiter
+  - Team-Skill-Matrix
+  - Weiterbildungsbudget-Tracking
 
 ## 4. Projektvisualisierung und Analyse
 
-[Previous content continues unchanged...]
+### US-4.1: Ressourcenauslastung
+**Als** Projektleiter oder Administrator  
+**möchte ich** die Ressourcenauslastung visualisieren können  
+**damit** ich Engpässe und Optimierungspotenziale erkennen kann
+
+**Akzeptanzkriterien:**
+- [ ] Timeline-Ansicht:
+  - Monatsweise scrollbar
+  - Farbkodierte Auslastungsgrade
+  - Drill-down zu Projektdetails
+  - Filter nach Teams/Skills
+- [ ] Auslastungsberechnung:
+  - Berücksichtigung von Teilzeit
+  - Einbeziehung von Abwesenheiten
+  - Warnung bei Über-/Unterlast
+- [ ] Export-Funktionen:
+  - PDF-Report
+  - Excel-Datenexport
+  - Automatische Reports
