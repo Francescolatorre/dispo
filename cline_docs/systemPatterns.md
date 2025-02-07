@@ -23,24 +23,36 @@
    - RESTful Endpoints
    - Standardisierte Fehlerbehandlung
    - Validierung von Eingabedaten
+   - JWT-basierte Authentifizierung
+   - Rate Limiting für API-Zugriffe
 
 2. **Datenbank Design**
    - Normalisierte Tabellenstruktur mit:
+     * users (Benutzerverwaltung)
      * employees (Mitarbeiterdaten)
      * projects (Projektdaten mit Referenz auf Projektleiter)
      * project_assignments (Verknüpfungstabelle für Projekt-Mitarbeiter Zuweisungen)
+     * requirements (Projektanforderungen)
+     * absences (Mitarbeiterabwesenheiten)
+     * qualifications (Mitarbeiterqualifikationen)
    - Referentielle Integrität durch Foreign Keys:
      * Projektleiter muss existierender Mitarbeiter sein
      * Projekt-Mitarbeiter Zuweisungen referenzieren gültige Projekte und Mitarbeiter
+     * Abwesenheiten referenzieren gültige Mitarbeiter
+     * Qualifikationen referenzieren gültige Mitarbeiter
    - Zeitliche Validierung:
      * Mitarbeiterzuweisungen müssen innerhalb der Projektlaufzeit liegen
      * Automatische Projektzuweisung für Projektleiter
+     * Abwesenheiten dürfen sich nicht mit 100% Projektzuweisungen überschneiden
    - Indizierung für Performance
+     * B-Tree Indizes für Fremdschlüssel
+     * GiST Indizes für Zeiträume
 
 3. **Authentication**
-   - Token-basierte Authentifizierung
-   - Sichere Passwort-Speicherung
-   - Session Management
+   - JWT-basierte Authentifizierung
+   - Sichere Passwort-Speicherung mit bcrypt
+   - Role-based Access Control (RBAC)
+   - Token-Blacklisting für Logout
 
 ## Key Technical Decisions
 
@@ -54,6 +66,7 @@
    - Papa Parse für zuverlässiges CSV Parsing
    - Clientseitige Validierung
    - Flexibles Mapping von Datenformaten
+   - Batch-Processing für große Datensätze
 
 ### Backend
 1. **Node.js & Express**
@@ -65,6 +78,8 @@
    - ACID Compliance
    - Robuste Datenkonsistenz
    - Erweiterbare Struktur
+   - Native Unterstützung für JSON-Datentypen (für Qualifikationen)
+   - Zeitraum-Operatoren für Verfügbarkeitsberechnung
 
 ### Deployment
 1. **Heroku**
@@ -84,6 +99,7 @@
    - Controlled Components
    - Form Validation
    - Error Handling
+   - Dynamische Formulare für Qualifikationen
 
 3. **Layout Patterns**
    - Responsive Grid System
@@ -101,12 +117,16 @@
        - Skills als Tags
      * Farbkodierung für Auslastungsgrade
      * Vertikale Anordnung mehrerer Projekte
+     * Abwesenheitsanzeige im Timeline-View
 
 ### Backend Patterns
 1. **API Patterns**
    - MVC Architecture
    - Middleware für Authentifizierung
    - Service Layer für Business Logic
+   - Resource-based URL Structure
+   - Bulk Operations für CSV Import/Export
+   - Caching für Report-Generierung
 
 2. **Database Patterns**
    - Repository Pattern
@@ -116,11 +136,15 @@
      * Zeitbasierte Abfragen für Timeline
      * Überlappende Zeiträume für Zuweisungen
      * Validierung von Zeitspannen
+     * Aggregation für Ressourcenauslastung
 
 3. **Security Patterns**
    - Authentication Middleware
    - Input Sanitization
    - Rate Limiting
+   - CORS Configuration
+   - Request Validation
+   - SQL Injection Prevention
 
 ## Code Organization
 
@@ -133,6 +157,7 @@ src/
   utils/         # Hilfsfunktionen
   hooks/         # Custom React Hooks
   styles/        # Globale Styles
+  types/         # TypeScript Definitionen
 ```
 
 ### Backend Structure
@@ -144,3 +169,30 @@ src/
   middleware/    # Express Middleware
   utils/         # Hilfsfunktionen
   routes/        # API Routes
+  validators/    # Request Validation
+  types/         # TypeScript Definitionen
+```
+
+## Data Flow Patterns
+
+1. **API Request Flow**
+   - Request Validation
+   - Authentication Check
+   - Rate Limit Check
+   - Business Logic Processing
+   - Response Formatting
+
+2. **Data Import Flow**
+   - File Upload
+   - Format Validation
+   - Data Transformation
+   - Batch Processing
+   - Error Handling
+   - Progress Tracking
+
+3. **Report Generation Flow**
+   - Data Aggregation
+   - Caching Strategy
+   - Pagination
+   - Format Conversion
+   - Error Handling
