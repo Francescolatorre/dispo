@@ -1,50 +1,27 @@
 # Active Context
 
-## Current Focus
-- Implementierung der Kernfunktionalitäten
-- Frontend Routing und Navigation
-- Integration von Frontend und Backend
+## Current Task
+Setting up and verifying the PostgreSQL MCP server connection.
 
 ## Recent Changes
-- Frontend Projekt mit React und TypeScript aufgesetzt
-- Material-UI implementiert und konfiguriert
-- Basis-Layout mit AppBar erstellt
-- Projektstruktur nach Best Practices organisiert
-- CI=true konfiguriert für non-watch mode tests
+- Built the PostgreSQL MCP server TypeScript code
+- Verified environment variables in .env file
+- Confirmed MCP settings configuration in cline_mcp_settings.json
+- Server is built and ready, waiting for VSCode restart to initialize connection
 
 ## Next Steps
+1. After VSCode restart, verify MCP server connection using get_table_info tool
+2. Test database connectivity with a simple query
+3. Document available PostgreSQL tools and their usage
 
-### 1. Frontend Routing
-- [ ] React Router implementieren
-- [ ] Geschützte Routen einrichten
-- [ ] Navigation-Komponenten erstellen
-- [ ] Breadcrumb-Navigation hinzufügen
+## Technical Details
+PostgreSQL MCP server provides three main tools:
+- query: For executing SELECT queries
+- get_table_info: For getting table schema information
+- execute: For executing INSERT, UPDATE, DELETE statements
 
-### 2. Authentication
-- [ ] Login-Formular erstellen
-- [ ] Token-basierte Auth implementieren
-- [ ] Protected Routes Setup
-- [ ] Error Handling
-
-### 3. Projekt Management
-- [ ] Projekt-Liste Komponente
-- [ ] Projekt-Details Ansicht
-- [ ] Projekt CRUD Operationen
-- [ ] Filter und Suche
-
-### 4. Erste Features
-- [ ] Benutzerauthentifizierung
-- [ ] Projekt CRUD Operationen
-- [ ] Mitarbeiter CRUD Operationen
-- [ ] Basis-Berichtsfunktionen
-
-## Current Challenges
-- Aufsetzen der initialen Projektstruktur
-- Integration aller gewählten Technologien
-- Implementierung der Basis-Funktionalitäten
-
-## Notes
-- Fokus auf MVP Features
-- Saubere Codestruktur von Anfang an
-- Dokumentation parallel zur Entwicklung
-- Test-Konfiguration: CI=true für einmalige Test-Ausführung
+Connection details:
+- Host: localhost
+- Port: 5432
+- Database: dispomvp
+- User: dispo

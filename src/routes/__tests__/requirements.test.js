@@ -30,7 +30,7 @@ describe('Requirements API', () => {
         'Test Employee',
         get_test_employee_number(),
         '2024-01-01',
-        'test@example.com',
+        get_test_email(),
         'Developer',
         'Senior',
         'SR',

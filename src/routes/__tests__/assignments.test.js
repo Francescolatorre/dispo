@@ -31,7 +31,7 @@ describe('Assignments API', () => {
         'Test Employee',
         get_test_employee_number(),
         '2024-01-01',
-        'test@example.com',
+        get_test_email(),
         'Developer',
         'Senior',
         'SR',
@@ -42,7 +42,7 @@ describe('Assignments API', () => {
     `);
     testEmployeeId = employeeResult.rows[0].id;
 
-    // Create test project
+    // Create test project with unique project number
     const projectResult = await pool.query(`
       INSERT INTO projects (
         name,
@@ -54,7 +54,7 @@ describe('Assignments API', () => {
         fte_count
       ) VALUES (
         'Test Project',
-        'TEST-001',
+        'TEST-' || nextval('test_employee_number_seq'),
         '2024-01-01',
         '2024-12-31',
         'Berlin',
