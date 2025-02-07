@@ -6,7 +6,7 @@ import { renderWithProviders } from './test/utils';
 
 describe('App Component', () => {
   it('renders dashboard by default', () => {
-    renderWithProviders(<App />);
+    renderWithProviders(<App withRouter={false} />);
     
     // Check for dashboard content
     const main = screen.getByRole('main');
@@ -15,7 +15,7 @@ describe('App Component', () => {
   });
 
   it('navigates between pages', async () => {
-    renderWithProviders(<App />);
+    renderWithProviders(<App withRouter={false} />);
     const user = userEvent.setup();
 
     // Navigate to Projects
@@ -39,7 +39,7 @@ describe('App Component', () => {
   });
 
   it('maintains layout structure across routes', async () => {
-    renderWithProviders(<App />);
+    renderWithProviders(<App withRouter={false} />);
     const user = userEvent.setup();
 
     // Check initial layout
@@ -55,7 +55,7 @@ describe('App Component', () => {
   });
 
   it('applies theme correctly', () => {
-    renderWithProviders(<App />);
+    renderWithProviders(<App withRouter={false} />);
     
     // Check if theme is applied to AppBar
     const appBar = screen.getByRole('banner');

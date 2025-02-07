@@ -1,176 +1,130 @@
-import axios from 'axios';
-import {
+import type {
   Assignment,
-  NewAssignment,
-  UpdateAssignment,
-  AssignmentHistory,
-  AvailabilityResult,
-  AssignmentStats,
+  AssignmentWithRelations,
+  CreateAssignmentDto,
+  UpdateAssignmentDto,
+  AssignmentValidation,
+  AssignmentValidationDto,
   AssignmentFilters,
-  TerminationRequest,
-  AssignmentValidation
 } from '../types/assignment';
 
-const API_BASE = '/api/assignments';
+const API_BASE_URL = '/api/assignments';
 
-/**
- * Service for managing project assignments
- */
-class AssignmentService {
-  /**
-   * Get all assignments for a project
-   */
-  async getProjectAssignments(projectId: number): Promise<Assignment[]> {
-    const response = await axios.get(`${API_BASE}/project/${projectId}`);
-    return response.data;
-  }
+// Convert camelCase to snake_case
+function toSnakeCase(data: Record<string, any>): Record<string, any> {
+  const result: Record<string, any> = {};
+  Object.entries(data).forEach(([key, value]) => {
+    if (value !== undefined) {
+      const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+      result[snakeKey] = value;
+    }
+  });
+  return result;
+}
 
-  /**
-   * Get all assignments for an employee
-   */
-  async getEmployeeAssignments(employeeId: number): Promise<Assignment[]> {
-    const response = await axios.get(`${API_BASE}/employee/${employeeId}`);
-    return response.data;
-  }
-
-  /**
-   * Get a single assignment by ID
-   */
-  async getAssignmentById(id: number): Promise<Assignment> {
-    const response = await axios.get(`${API_BASE}/${id}`);
-    return response.data;
-  }
-
-  /**
-   * Create a new assignment
-   */
-  async createAssignment(data: NewAssignment): Promise<Assignment> {
-    const response = await axios.post(API_BASE, data);
-    return response.data;
-  }
-
-  /**
-   * Update an assignment
-   */
-  async updateAssignment(id: number, data: UpdateAssignment): Promise<Assignment> {
-    const response = await axios.put(`${API_BASE}/${id}`, data);
-    return response.data;
-  }
-
-  /**
-   * Terminate an assignment
-   */
-  async terminateAssignment(id: number, data: TerminationRequest): Promise<Assignment> {
-    const response = await axios.post(`${API_BASE}/${id}/terminate`, data);
-    return response.data;
-  }
-
-  /**
-   * Get assignment history for a requirement
-   */
-  async getRequirementHistory(requirementId: number): Promise<AssignmentHistory[]> {
-    const response = await axios.get(`${API_BASE}/requirement/${requirementId}/history`);
-    return response.data;
-  }
-
-  /**
-   * Check employee availability
-   */
-  async checkEmployeeAvailability(
-    employeeId: number,
-    startDate: string,
-    endDate: string
-  ): Promise<AvailabilityResult> {
-    const response = await axios.get(`${API_BASE}/check-availability/${employeeId}`, {
-      params: { start_date: startDate, end_date: endDate }
-    });
-    return response.data;
-  }
-
-  /**
-   * Get filtered and paginated assignments
-   */
-  async getFilteredAssignments(
-    projectId: number,
-    filters: AssignmentFilters,
-    page: number = 1,
-    pageSize: number = 10
-  ): Promise<{ assignments: Assignment[]; total: number }> {
-    const response = await axios.get(`${API_BASE}/project/${projectId}/filter`, {
-      params: {
-        ...filters,
-        page,
-        pageSize
+async function getAssignments(filters?: AssignmentFilters): Promise<AssignmentWithRelations[]> {
+  const queryParams = new URLSearchParams();
+  if (filters) {
+    const snakeCaseFilters = toSnakeCase(filters);
+    Object.entries(snakeCaseFilters).forEach(([key, value]) => {
+      if (value !== undefined) {
+        queryParams.append(key, value.toString());
       }
     });
-    return response.data;
   }
 
-  /**
-   * Get assignment statistics
-   */
-  async getAssignmentStats(projectId: number): Promise<AssignmentStats> {
-    const response = await axios.get(`${API_BASE}/project/${projectId}/stats`);
-    return response.data;
+  const response = await fetch(`${API_BASE_URL}?${queryParams.toString()}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch assignments');
   }
+  return response.json();
+}
 
-  /**
-   * Validate an assignment
-   */
-  async validateAssignment(
-    data: NewAssignment | UpdateAssignment
-  ): Promise<AssignmentValidation> {
-    const response = await axios.post(`${API_BASE}/validate`, data);
-    return response.data;
+async function getAssignment(id: number): Promise<AssignmentWithRelations> {
+  const response = await fetch(`${API_BASE_URL}/${id}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch assignment');
   }
+  return response.json();
+}
 
-  /**
-   * Bulk update assignments
-   */
-  async bulkUpdateAssignments(
-    ids: number[],
-    data: Partial<UpdateAssignment>
-  ): Promise<Assignment[]> {
-    const response = await axios.put(`${API_BASE}/bulk-update`, {
-      ids,
-      data
-    });
-    return response.data;
+async function createAssignment(data: CreateAssignmentDto): Promise<Assignment> {
+  const response = await fetch(API_BASE_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to create assignment');
   }
+  return response.json();
+}
 
-  /**
-   * Export assignments to CSV
-   */
-  async exportAssignments(projectId: number, filters?: AssignmentFilters): Promise<Blob> {
-    const response = await axios.get(`${API_BASE}/project/${projectId}/export`, {
-      params: filters,
-      responseType: 'blob'
-    });
-    return response.data;
+async function updateAssignment(id: number, data: UpdateAssignmentDto): Promise<Assignment> {
+  const response = await fetch(`${API_BASE_URL}/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to update assignment');
   }
+  return response.json();
+}
 
-  /**
-   * Import assignments from CSV
-   */
-  async importAssignments(projectId: number, file: File): Promise<{
-    created: number;
-    updated: number;
-    errors: string[];
-  }> {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const response = await axios.post(
-      `${API_BASE}/project/${projectId}/import`,
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      }
-    );
-    return response.data;
+async function deleteAssignment(id: number): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/${id}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    throw new Error('Failed to delete assignment');
   }
 }
 
-export default new AssignmentService();
+async function validateAssignment(data: AssignmentValidationDto): Promise<AssignmentValidation> {
+  const snakeCaseData = toSnakeCase(data);
+  const response = await fetch(`${API_BASE_URL}/validate`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(snakeCaseData),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to validate assignment');
+  }
+  return response.json();
+}
+
+async function getAssignmentsByProject(projectId: number): Promise<AssignmentWithRelations[]> {
+  const response = await fetch(`${API_BASE_URL}/project/${projectId}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch project assignments');
+  }
+  return response.json();
+}
+
+async function getAssignmentsByEmployee(employeeId: number): Promise<AssignmentWithRelations[]> {
+  const response = await fetch(`${API_BASE_URL}/employee/${employeeId}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch employee assignments');
+  }
+  return response.json();
+}
+
+export const assignmentService = {
+  getAssignments,
+  getAssignment,
+  createAssignment,
+  updateAssignment,
+  deleteAssignment,
+  validateAssignment,
+  getAssignmentsByProject,
+  getAssignmentsByEmployee,
+  // Alias for backward compatibility
+  getProjectAssignments: getAssignmentsByProject,
+};

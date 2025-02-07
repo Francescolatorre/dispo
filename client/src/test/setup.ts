@@ -1,47 +1,40 @@
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
+import { configure } from '@testing-library/dom';
 import React from 'react';
-import { LocalizationProvider } from '@mui/x-date-pickers';
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 
-// Mock dayjs
-vi.mock('dayjs', () => {
-  return {
-    default: (date: string | Date) => ({
-      format: (fmt: string) => {
-        if (fmt === 'MMM D, YYYY') {
-          return new Date(date).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
-          });
-        }
-        return new Date(date).toLocaleDateString();
-      }
-    })
-  };
+// Configure testing-library
+configure({
+  asyncUtilTimeout: 2000,
+  computedStyleSupportsPseudoElements: true,
 });
 
-// Mock MUI components
-vi.mock('@mui/material', async () => {
-  const actual = await vi.importActual('@mui/material');
-  return {
-    ...actual,
-    useMediaQuery: () => false
-  };
-});
+// Initialize JSDOM environment
+if (typeof window === 'undefined') {
+  const { JSDOM } = require('jsdom');
+  const dom = new JSDOM('<!doctype html><html><body></body></html>', {
+    url: 'http://localhost',
+    pretendToBeVisual: true,
+    resources: 'usable',
+  });
+  global.window = dom.window;
+  global.document = dom.window.document;
+  global.navigator = dom.window.navigator;
+}
 
-vi.mock('@mui/lab', async () => {
-  const actual = await vi.importActual('@mui/lab');
-  return {
-    ...actual,
-    Timeline: vi.fn().mockImplementation(({ children }) => children),
-    TimelineItem: vi.fn().mockImplementation(({ children }) => children),
-    TimelineSeparator: vi.fn().mockImplementation(({ children }) => children),
-    TimelineConnector: vi.fn().mockImplementation(() => null),
-    TimelineContent: vi.fn().mockImplementation(({ children }) => children),
-    TimelineDot: vi.fn().mockImplementation(({ children }) => children)
-  };
+// Mock matchMedia
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: vi.fn().mockImplementation(query => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
 });
 
 // Mock ResizeObserver
@@ -51,41 +44,105 @@ global.ResizeObserver = vi.fn().mockImplementation(() => ({
   disconnect: vi.fn(),
 }));
 
-// Update test utils to include LocalizationProvider
-vi.mock('../test/utils', async () => {
-  const actual = await vi.importActual<typeof import('../test/utils')>('../test/utils');
-  const React = await vi.importActual('react');
-  const { LocalizationProvider } = await vi.importActual('@mui/x-date-pickers');
-  const { AdapterDayjs } = await vi.importActual('@mui/x-date-pickers/AdapterDayjs');
+// Mock IntersectionObserver
+global.IntersectionObserver = vi.fn().mockImplementation(() => ({
+  observe: vi.fn(),
+  unobserve: vi.fn(),
+  disconnect: vi.fn(),
+  root: null,
+  rootMargin: '',
+  thresholds: [],
+}));
 
+// Mock window.scrollTo
+window.scrollTo = vi.fn();
+
+// Mock date for consistent testing
+const mockDate = new Date('2024-01-01T00:00:00.000Z');
+vi.setSystemTime(mockDate);
+
+// Mock Chakra UI components with proper theme support
+vi.mock('@chakra-ui/react', async () => {
+  const actual = await vi.importActual('@chakra-ui/react');
   return {
     ...actual,
-    renderWithProviders: (ui: React.ReactElement) => {
-      const { renderWithProviders } = actual;
-      const React = require('react');
-      const { LocalizationProvider } = require('@mui/x-date-pickers');
-      const { AdapterDayjs } = require('@mui/x-date-pickers/AdapterDayjs');
-      return renderWithProviders(
-        React.createElement(LocalizationProvider, { dateAdapter: AdapterDayjs }, ui)
-      );
-    }
+    useToast: () => vi.fn(),
+    Menu: ({ children }: any) => React.createElement('div', { role: 'menu' }, children),
+    MenuButton: React.forwardRef(({ children, as: Component = 'div', borderRadius, bg, color, _hover, ...props }: any, ref) => {
+      const dataProps = {
+        'data-testid': 'assignment-block',
+        role: 'button',
+        style: {
+          ...props.style,
+          borderRadius: borderRadius === 'md' ? '4px' : borderRadius,
+          backgroundColor: bg === 'blue.500' ? '#3182ce' : bg,
+          color,
+        },
+        ...props,
+        ref,
+      };
+      return React.createElement(Component, dataProps, children);
+    }),
+    MenuList: ({ children }: any) => React.createElement('div', { role: 'menu' }, children),
+    MenuItem: ({ children, onClick }: any) => React.createElement('button', { role: 'menuitem', onClick }, children),
+    Box: React.forwardRef(({ children, as: Component = 'div', borderRadius, bg, color, _hover, position, left, width, ...props }: any, ref) => {
+      const dataProps = {
+        ...props,
+        ref,
+        style: {
+          ...props.style,
+          position,
+          left,
+          width,
+          borderRadius: borderRadius === 'md' ? '4px' : borderRadius,
+          backgroundColor: bg === 'blue.500' ? '#3182ce' : bg,
+          color,
+        },
+      };
+      return React.createElement(Component || 'div', dataProps, children);
+    }),
+    Text: ({ children, isTruncated, fontSize, px, ...props }: any) => {
+      const style = {
+        ...props.style,
+        fontSize: fontSize === 'sm' ? '14px' : fontSize,
+        paddingLeft: px ? `${px * 8}px` : undefined,
+        paddingRight: px ? `${px * 8}px` : undefined,
+        whiteSpace: isTruncated ? 'nowrap' : undefined,
+        overflow: isTruncated ? 'hidden' : undefined,
+        textOverflow: isTruncated ? 'ellipsis' : undefined,
+      };
+      return React.createElement('p', { ...props, style }, children);
+    },
   };
 });
 
-// Suppress console errors during tests
-const originalError = console.error;
-beforeAll(() => {
-  console.error = (...args: any[]) => {
-    if (
-      typeof args[0] === 'string' &&
-      args[0].includes('Warning: ReactDOM.render is no longer supported')
-    ) {
-      return;
-    }
-    originalError.call(console, ...args);
-  };
+// Mock local storage
+const mockLocalStorage = {
+  store: {} as Record<string, string>,
+  getItem: vi.fn((key: string) => mockLocalStorage.store[key]),
+  setItem: vi.fn((key: string, value: string) => {
+    mockLocalStorage.store[key] = value;
+  }),
+  clear: vi.fn(() => {
+    mockLocalStorage.store = {};
+  }),
+};
+
+Object.defineProperty(window, 'localStorage', {
+  value: mockLocalStorage,
 });
 
-afterAll(() => {
-  console.error = originalError;
+// Mock portal container
+beforeEach(() => {
+  const portalRoot = document.createElement('div');
+  portalRoot.setAttribute('id', 'chakra-portal');
+  document.body.appendChild(portalRoot);
+});
+
+afterEach(() => {
+  const portalRoot = document.getElementById('chakra-portal');
+  if (portalRoot) {
+    document.body.removeChild(portalRoot);
+  }
+  vi.clearAllMocks();
 });

@@ -24,6 +24,17 @@
   - Formular behält eingegebene Daten (außer Passwort)
   - Spezifische Fehlermeldungen pro Feld
   - Keine Benutzeranlage bei Validierungsfehlern
+- [ ] Testfälle für Edge Cases:
+  - Maximale Länge Username (50 Zeichen)
+  - Sonderzeichen im Username (nicht erlaubt)
+  - Passwort mit Leerzeichen (erlaubt)
+  - Doppelte Email-Adressen (nicht erlaubt)
+  - Gleichzeitiges Anlegen des gleichen Usernames
+- [ ] Fehlerszenarien:
+  - Email-Server nicht erreichbar
+  - Datenbank-Verbindung unterbrochen
+  - Session-Timeout während Anlage
+  - Browser-Refresh während Anlage
 
 ## 2. Projektmanagement
 
@@ -71,6 +82,19 @@
   - Protokollierung aller Änderungen
   - Email-Benachrichtigung an betroffene Mitarbeiter
   - Keine rückwirkenden Änderungen erlaubt
+- [ ] Testfälle für Edge Cases:
+  - Zuweisung genau am Projektstart/-ende
+  - Mitarbeiter in Teilzeit (Auslastung anpassen)
+  - Überlappende Zuweisungen mit 90% + 20%
+  - Zuweisung während geplanter Urlaub/Krankheit
+  - Zuweisung über Vertragsende hinaus
+  - Mehrere gleichzeitige Zuweisungen nahe 100%
+- [ ] Fehlerszenarien:
+  - Projekt während Zuweisung archiviert
+  - Mitarbeiter während Zuweisung deaktiviert
+  - Gleichzeitige Zuweisungen durch mehrere Projektleiter
+  - Massenänderung von Zuweisungen
+  - Netzwerkfehler während Speichervorgang
 
 ## 3. Mitarbeiter- und Ressourcenplanung
 
@@ -134,6 +158,23 @@
   - Dokumentation geplanter Schulungen
   - Tracking von Zertifikatserneuerungen
   - Automatische Erinnerungen vor Ablauf
+- [ ] Testfälle für Edge Cases:
+  - Skill ohne Level-Angabe
+  - Abgelaufene Zertifikate
+  - Skill-Level Änderung während Projekt
+  - Maximale Anzahl Skills pro Mitarbeiter (100)
+  - Duplikate bei Soft Skills
+  - Zertifikat kurz vor Ablauf
+  - Sprachniveau ohne Zertifikat
+  - Skill mit 0 Jahren Erfahrung
+- [ ] Fehlerszenarien:
+  - Ungültiges Zertifikats-PDF (>10MB)
+  - Skill-Level außerhalb 1-5
+  - Zertifikat ohne Ablaufdatum
+  - Inkonsistente Sprachniveau-Angaben
+  - Nicht-existierende Skill-Kategorie
+  - Doppelte Zertifikatseinträge
+  - Fehler beim PDF-Upload
 
 ### US-3.3: Abwesenheitsverwaltung
 **Als** Administrator oder Projektleiter  
@@ -158,6 +199,23 @@
   - Abwesenheitsstatistiken pro Mitarbeiter/Team
   - Urlaubskontostand
   - Krankheitsquote
+- [ ] Testfälle für Edge Cases:
+  - Krankheit während Urlaub (Urlaubstage gutschreiben)
+  - Feiertage in Abwesenheitsperiode (nicht zählen)
+  - Halbe Urlaubstage (vormittags/nachmittags)
+  - Überlappende Abwesenheiten verschiedener Typen
+  - Abwesenheit über Jahreswechsel (Urlaubskonto)
+  - Kurzfristige Krankmeldung
+  - Vertretung selbst abwesend
+  - Sonderurlaub ohne Begründung
+- [ ] Fehlerszenarien:
+  - Urlaubskonto überzogen
+  - Vertretung nicht verfügbar
+  - Stornierung bereits begonnener Abwesenheit
+  - Krankmeldung für vergangene Tage
+  - Doppelte Abwesenheitsmeldung
+  - Fehler in Kalendersynchronisation
+  - Inkonsistente Urlaubsberechnung
 
 ### US-3.4: Verfügbarkeitsmanagement
 **Als** Projektleiter  
@@ -182,6 +240,23 @@
   - "Was-wäre-wenn" Simulation neuer Zuweisungen
   - Team-Kapazitätsplanung
   - Export der Auslastungsdaten
+- [ ] Testfälle für Edge Cases:
+  - Verfügbarkeit bei flexibler Arbeitszeit
+  - Berechnung bei Teilzeit-Änderung
+  - Feiertage in verschiedenen Standorten
+  - Ressourcenplanung über Jahreswechsel
+  - Berücksichtigung von Bereitschaftszeiten
+  - Mitarbeiter mit mehreren Teilzeitverträgen
+  - Überlappende Projektphasen
+  - Langzeitabwesenheiten
+- [ ] Fehlerszenarien:
+  - Inkonsistente Auslastungsdaten
+  - Fehlerhafte Teilzeitberechnung
+  - Überlappende Planungsszenarien
+  - Verfügbarkeitsberechnung bei ungültigen Daten
+  - Gleichzeitige Simulationen mehrerer Nutzer
+  - Fehler in der Feiertags-API
+  - Timeout bei komplexen Berechnungen
 
 ### US-3.5: Skill-Entwicklung und Karriereplanung
 **Als** Administrator  

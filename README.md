@@ -1,165 +1,176 @@
-# DispoMVP - Resource Management System
+# DispoMVP - Resource Planning System
 
-A comprehensive resource management system for managing employees, projects, requirements, and assignments.
+## Overview
 
-## 🚀 Features
+DispoMVP is a comprehensive resource planning system designed to help organizations efficiently manage and allocate their resources. The system provides tools for project management, employee assignment, and workload visualization.
 
-- Employee management with detailed profiles
-- Project planning and timeline visualization
-- Requirement tracking and assignment
-- Interactive dashboard
-- Comprehensive reporting system
+## Features
 
-## 🛠️ Tech Stack
+- Project Management
+  - Create and manage projects
+  - Define project requirements
+  - Track project timelines
+  - Monitor project status
 
-### Frontend
-- React 
-- TypeScript
-- Vite
-- Playwright for E2E testing
-- Vitest for unit testing
+- Resource Management
+  - Employee profiles and skills
+  - Resource allocation
+  - Workload visualization
+  - Capacity planning
 
-### Backend
-- Node.js
-- Express
-- PostgreSQL
-- Jest for testing
+- Timeline Visualization
+  - Interactive timeline view
+  - Drag-and-drop assignments
+  - Resource conflicts detection
+  - Workload indicators
 
-## 📋 Prerequisites
+- Assignment Management
+  - Create and edit assignments
+  - Set allocation percentages
+  - Define roles and responsibilities
+  - Track assignment status
+
+## Tech Stack
+
+- Frontend
+  - React with TypeScript
+  - Chakra UI for components
+  - Vite for build tooling
+  - Vitest for testing
+
+- Backend
+  - Node.js
+  - Express
+  - PostgreSQL
+  - Jest for testing
+
+## Getting Started
+
+### Prerequisites
 
 - Node.js (v18 or higher)
 - PostgreSQL (v14 or higher)
 - npm or yarn
 
-## 🔧 Setup
+### Installation
 
 1. Clone the repository:
+
 ```bash
-git clone [repository-url]
+git clone https://github.com/yourusername/DispoMVP.git
 cd DispoMVP
 ```
 
-2. Set up environment variables:
-```bash
-cp .env.example .env
-# Edit .env with your database credentials and other configurations
-```
+2. Install backend dependencies:
 
-3. Install backend dependencies:
 ```bash
 npm install
 ```
 
-4. Install frontend dependencies:
+3. Install frontend dependencies:
+
 ```bash
 cd client
 npm install
 ```
 
-5. Set up the database:
+4. Set up environment variables:
+
 ```bash
-# Run database migrations
-node src/db/init.sql
+cp .env.example .env
+# Edit .env with your configuration
 ```
 
-## 🚀 Development
+5. Initialize the database:
+
+```bash
+npm run db:init
+```
+
+### Development
 
 1. Start the backend server:
+
 ```bash
 npm run dev
 ```
 
 2. Start the frontend development server:
+
 ```bash
 cd client
 npm run dev
 ```
 
-The application will be available at:
-- Frontend: http://localhost:5173
-- Backend API: http://localhost:3000
+3. Run tests:
 
-## 🧪 Testing
-
-### Backend Tests
 ```bash
+# Backend tests
 npm test
-```
 
-### Frontend Tests
-
-Unit and Integration Tests:
-```bash
+# Frontend tests
 cd client
 npm test
 ```
 
-E2E Tests:
-```bash
-cd client
-npm run test:e2e
-```
-
-## 📁 Project Structure
+## Project Structure
 
 ```
+DispoMVP/
 ├── client/                 # Frontend React application
 │   ├── src/
 │   │   ├── components/    # React components
-│   │   ├── pages/        # Page components
-│   │   ├── services/     # API services
-│   │   ├── types/        # TypeScript types
-│   │   └── utils/        # Utility functions
-│   └── tests/            # E2E tests
-├── src/                   # Backend application
+│   │   ├── services/      # API services
+│   │   ├── types/         # TypeScript types
+│   │   └── utils/         # Utility functions
+│   └── tests/             # Frontend tests
+├── src/                   # Backend Node.js application
 │   ├── config/           # Configuration files
 │   ├── db/               # Database migrations and setup
 │   ├── middleware/       # Express middleware
-│   ├── routes/           # API routes
-│   └── services/         # Business logic
-└── meta/                 # Project metadata and schemas
-    └── schemas/          # JSON schemas
+│   ├── routes/          # API routes
+│   └── services/        # Business logic
+├── docs/                 # Documentation
+└── meta/                # Meta-models and schemas
 ```
 
-## 🔄 Development Workflow
+## Documentation
 
-1. Create a new branch for your feature/fix
-2. Write tests for new functionality
-3. Implement your changes
-4. Ensure all tests pass
-5. Submit a pull request
+- [API Documentation](docs/api.md)
+- [User Stories](cline_docs/userStories.md)
+- [System Patterns](cline_docs/systemPatterns.md)
+- [Technical Requirements](cline_docs/technicalRequirements.md)
 
-## 📝 API Documentation
+## Testing
 
-API endpoints are organized around the following resources:
+The project uses a comprehensive testing strategy:
 
-- `/api/employees` - Employee management
-- `/api/projects` - Project management
-- `/api/requirements` - Requirement tracking
-- `/api/assignments` - Resource assignments
+- Unit Tests: Testing individual components and functions
+- Integration Tests: Testing API endpoints and database interactions
+- End-to-End Tests: Testing complete user workflows
+- Component Tests: Testing React components in isolation
 
-Detailed API documentation is available in the [API Documentation](docs/api.md).
+Run tests with:
 
-## 🤝 Contributing
+```bash
+# Run all tests
+npm test
+
+# Run specific test file
+npm test path/to/test.js
+
+# Run with coverage
+npm run test:coverage
+```
+
+## Contributing
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 👥 Team
-
-- [Team Member 1] - Project Lead
-- [Team Member 2] - Frontend Developer
-- [Team Member 3] - Backend Developer
-- [Team Member 4] - QA Engineer
-
-## 🙏 Acknowledgments
-
-- Thanks to all contributors who have helped shape this project
-- Special thanks to our early adopters and testers

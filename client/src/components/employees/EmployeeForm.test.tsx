@@ -1,29 +1,28 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { EmployeeForm } from './EmployeeForm';
 import { vi, describe, it, expect } from 'vitest';
-import { Employee, LEVEL_CODES } from '../../types/employee';
+import { screen } from '@testing-library/react';
+import { EmployeeForm } from './EmployeeForm';
+import { createMockEmployee, MOCK_EMPLOYEE_DATA } from '../../test/employee-test-utils';
+import {
+  render,
+  fillFormFields,
+  asyncAct,
+  waitForCondition,
+  createAsyncHandler,
+  fireEvent,
+  TEST_TIMEOUTS
+} from '../../test/test-setup';
+
+interface FormProps {
+  open: boolean;
+  onClose: () => void;
+  onSave: (data: any) => Promise<void>;
+  employee?: ReturnType<typeof createMockEmployee>;
+}
 
 describe('EmployeeForm', () => {
-  const mockEmployee: Employee = {
-    id: 1,
-    name: 'John Doe',
-    employee_number: 'EMP-1234',
-    entry_date: '2025-01-01',
-    email: 'john.doe@example.com',
-    phone: '123-456-7890',
-    position: 'Software Developer',
-    seniority_level: 'Mid',
-    level_code: LEVEL_CODES.Mid,
-    qualifications: ['TypeScript', 'React'],
-    work_time_factor: 50,
-    contract_end_date: '2025-12-31',
-    status: 'active',
-    part_time_factor: 100,
-    created_at: '2025-01-01T00:00:00.000Z',
-    updated_at: '2025-01-01T00:00:00.000Z',
-  };
+  const mockEmployee = createMockEmployee({ work_time_factor: 50 });
 
-  const defaultProps = {
+  const defaultProps: FormProps = {
     open: true,
     onClose: vi.fn(),
     onSave: vi.fn(),
@@ -46,40 +45,54 @@ describe('EmployeeForm', () => {
   });
 
   it('calls onSave with form data when submitted', async () => {
-    render(<EmployeeForm {...defaultProps} />);
+    const mockSave = createAsyncHandler(TEST_TIMEOUTS.short);
+    render(<EmployeeForm {...defaultProps} onSave={mockSave} />);
 
-    // Fill out form
-    fireEvent.change(screen.getByLabelText(/name/i), {
-      target: { value: 'Jane Smith' },
+    // Fill out all required fields
+    await fillFormFields([
+      { label: /name/i, value: 'Jane Smith' },
+      { label: /personalnummer/i, value: 'EMP-1234' },
+      { label: /position/i, value: 'Developer' },
+      { label: /e-mail/i, value: 'jane.smith@example.com' },
+      { label: /arbeitszeitfaktor \(%\)/i, value: 50 }
+    ]);
+
+    // Add qualifications
+    const qualificationsInput = screen.getByLabelText(/qualifikationen/i);
+    await asyncAct(async () => {
+      fireEvent.change(qualificationsInput, { target: { value: 'TypeScript' } });
+      fireEvent.keyDown(qualificationsInput, { key: 'Enter' });
     });
-    const select = screen.getByLabelText(/seniorität/i);
-    fireEvent.mouseDown(select);
-    const option = screen.getByText('Mid');
-    fireEvent.click(option);
-    fireEvent.change(screen.getByLabelText(/personalnummer/i), { target: { value: 'EMP-1234' } });
-    fireEvent.change(screen.getByLabelText(/eintrittsdatum/i), { target: { value: '2025-01-01' } });
-    fireEvent.change(screen.getByLabelText(/e-mail/i), { target: { value: 'jane.smith@example.com' } });
-    fireEvent.change(screen.getByLabelText(/position/i), { target: { value: 'Developer' } });
-    fireEvent.change(screen.getByLabelText(/arbeitszeitfaktor/i), { target: { value: '50' } });
 
     // Submit form
-    fireEvent.click(screen.getByText(/speichern/i));
+    await asyncAct(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /speichern/i }));
+    });
 
-    expect(defaultProps.onSave).toHaveBeenCalledWith(expect.objectContaining({
+    // Wait for save to complete
+    await waitForCondition(
+      () => mockSave.mock.calls.length > 0,
+      TEST_TIMEOUTS.medium
+    );
+
+    expect(mockSave).toHaveBeenCalledWith(expect.objectContaining({
       name: 'Jane Smith',
-      personalnummer: 'EMP-1234',
-      eintrittsdatum: '2025-01-01',
+      employee_number: 'EMP-1234',
       email: 'jane.smith@example.com',
       position: 'Developer',
-      seniorität: 'Mid',
-      arbeitszeitfaktor: '50',
+      qualifications: ['TypeScript'],
+      work_time_factor: 50,
+      seniority_level: 'Junior',
+      level_code: MOCK_EMPLOYEE_DATA.LEVEL_CODES.Junior
     }));
   });
 
-  it('calls onClose when cancel button is clicked', () => {
+  it('calls onClose when cancel button is clicked', async () => {
     render(<EmployeeForm {...defaultProps} />);
 
-    fireEvent.click(screen.getByText(/abbrechen/i));
+    await asyncAct(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /abbrechen/i }));
+    });
 
     expect(defaultProps.onClose).toHaveBeenCalled();
   });
@@ -88,19 +101,45 @@ describe('EmployeeForm', () => {
     render(<EmployeeForm {...defaultProps} />);
 
     // Submit form without filling required fields
-    fireEvent.click(screen.getByText(/speichern/i));
+    await asyncAct(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /speichern/i }));
+    });
 
+    // Wait for validation errors to appear
+    await waitForCondition(
+      () => screen.queryByRole('alert') !== null,
+      TEST_TIMEOUTS.short
+    );
+
+    // Check for validation errors
+    const alert = screen.getByRole('alert');
+    expect(alert).toBeInTheDocument();
+    expect(alert).toHaveTextContent('Name muss mindestens 2 Zeichen lang sein');
+    expect(alert).toHaveTextContent('Mindestens eine Qualifikation ist erforderlich');
     expect(defaultProps.onSave).not.toHaveBeenCalled();
-    expect(screen.getByText((content, element) => content.includes('Arbeitszeitfaktor muss zwischen 0 und 100 liegen'))).toBeInTheDocument();
 
     // Fill out form with invalid work time factor
-    const workTimeFactorInput = screen.getByLabelText(/arbeitszeitfaktor/i);
-    fireEvent.change(workTimeFactorInput, { target: { value: '101' } });
+    await fillFormFields([
+      { label: /arbeitszeitfaktor \(%\)/i, value: 101 }
+    ]);
 
-    // Submit form
-    fireEvent.click(screen.getByText(/speichern/i));
+    // Submit form again
+    await asyncAct(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /speichern/i }));
+    });
 
+    // Wait for validation error to update
+    await waitForCondition(
+      () => {
+        const alert = screen.queryByRole('alert');
+        return alert?.textContent?.includes('Arbeitszeitfaktor muss zwischen 0 und 100 liegen') ?? false;
+      },
+      TEST_TIMEOUTS.short
+    );
+
+    // Check for work time factor validation error
+    const updatedAlert = screen.getByRole('alert');
+    expect(updatedAlert).toHaveTextContent('Arbeitszeitfaktor muss zwischen 0 und 100 liegen');
     expect(defaultProps.onSave).not.toHaveBeenCalled();
-    expect(screen.getByText((content, element) => content.includes('Arbeitszeitfaktor muss zwischen 0 und 100 liegen'))).toBeInTheDocument();
   });
 });

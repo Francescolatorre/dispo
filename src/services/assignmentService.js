@@ -1,8 +1,9 @@
 const { pool } = require('../config/database');
+const workloadService = require('./workloadService');
 
 class AssignmentService {
   /**
-   * Create a new project assignment
+   * Create a new project assignment with workload validation
    */
   async createAssignment(data) {
     const client = await pool.connect();
@@ -21,6 +22,18 @@ class AssignmentService {
         position_status
       } = data;
 
+      // Validate workload
+      const workloadValidation = await workloadService.validateAssignment(
+        employee_id,
+        start_date,
+        end_date,
+        allocation_percentage
+      );
+
+      if (!workloadValidation.valid) {
+        throw new Error(workloadValidation.message);
+      }
+
       // Create the assignment
       const result = await client.query(
         `INSERT INTO project_assignments (
@@ -33,8 +46,9 @@ class AssignmentService {
           allocation_percentage,
           dr_status,
           position_status,
-          status
-        ) VALUES ($1, $2, $3, $4, $5::date, $6::date, $7, $8, $9, 'active')
+          status,
+          workload_warning
+        ) VALUES ($1, $2, $3, $4, $5::date, $6::date, $7, $8, $9, 'active', $10)
         RETURNING *`,
         [
           project_id,
@@ -45,7 +59,8 @@ class AssignmentService {
           end_date,
           allocation_percentage,
           dr_status,
-          position_status
+          position_status,
+          workloadValidation.warning
         ]
       );
 
@@ -81,7 +96,7 @@ class AssignmentService {
   }
 
   /**
-   * Get assignments for a project
+   * Get assignments for a project with workload information
    */
   async getProjectAssignments(projectId) {
     const result = await pool.query(
@@ -97,11 +112,22 @@ class AssignmentService {
       [projectId]
     );
 
-    return result.rows;
+    // Enhance with current workload information
+    const assignments = result.rows;
+    for (const assignment of assignments) {
+      const workload = await workloadService.calculateWorkload(
+        assignment.employee_id,
+        assignment.start_date,
+        assignment.end_date
+      );
+      assignment.totalWorkload = Math.max(...workload.map(w => w.totalWorkload));
+    }
+
+    return assignments;
   }
 
   /**
-   * Get assignments for an employee
+   * Get assignments for an employee with workload information
    */
   async getEmployeeAssignments(employeeId) {
     const result = await pool.query(
@@ -117,11 +143,22 @@ class AssignmentService {
       [employeeId]
     );
 
-    return result.rows;
+    // Add workload information
+    const assignments = result.rows;
+    for (const assignment of assignments) {
+      const workload = await workloadService.calculateWorkload(
+        employeeId,
+        assignment.start_date,
+        assignment.end_date
+      );
+      assignment.totalWorkload = Math.max(...workload.map(w => w.totalWorkload));
+    }
+
+    return assignments;
   }
 
   /**
-   * Update an assignment
+   * Update an assignment with workload validation
    */
   async updateAssignment(id, data) {
     const client = await pool.connect();
@@ -139,6 +176,23 @@ class AssignmentService {
         termination_reason
       } = data;
 
+      // If allocation or dates changed, validate workload
+      if (allocation_percentage || start_date || end_date) {
+        const currentAssignment = await this.getAssignmentById(id);
+        const workloadValidation = await workloadService.validateAssignment(
+          currentAssignment.employee_id,
+          start_date || currentAssignment.start_date,
+          end_date || currentAssignment.end_date,
+          allocation_percentage || currentAssignment.allocation_percentage
+        );
+
+        if (!workloadValidation.valid) {
+          throw new Error(workloadValidation.message);
+        }
+
+        data.workload_warning = workloadValidation.warning;
+      }
+
       const result = await client.query(
         `UPDATE project_assignments
          SET role = COALESCE($1, role),
@@ -149,8 +203,9 @@ class AssignmentService {
              position_status = COALESCE($6, position_status),
              status = COALESCE($7, status),
              termination_reason = COALESCE($8, termination_reason),
+             workload_warning = COALESCE($9, workload_warning),
              updated_at = CURRENT_TIMESTAMP
-         WHERE id = $9
+         WHERE id = $10
          RETURNING *`,
         [
           role,
@@ -161,6 +216,7 @@ class AssignmentService {
           position_status,
           status,
           termination_reason,
+          data.workload_warning,
           id
         ]
       );
@@ -201,48 +257,6 @@ class AssignmentService {
     } finally {
       client.release();
     }
-  }
-
-  /**
-   * Get assignment history for a requirement
-   */
-  async getRequirementHistory(requirementId) {
-    const result = await pool.query(
-      `SELECT a.*,
-              e.name as employee_name,
-              e.seniority_level as employee_seniority_level
-       FROM project_assignments a
-       LEFT JOIN employees e ON a.employee_id = e.id
-       WHERE a.requirement_id = $1
-       ORDER BY a.start_date DESC`,
-      [requirementId]
-    );
-
-    return result.rows;
-  }
-
-  /**
-   * Check employee availability for a given period
-   */
-  async checkEmployeeAvailability(employeeId, startDate, endDate) {
-    const result = await pool.query(
-      `SELECT 
-         a.id,
-         a.project_id,
-         p.name as project_name,
-         a.start_date::text,
-         a.end_date::text,
-         a.allocation_percentage
-       FROM project_assignments a
-       JOIN projects p ON a.project_id = p.id
-       WHERE a.employee_id = $1
-         AND a.status = 'active'
-         AND (a.start_date::date, a.end_date::date) OVERLAPS ($2::date, $3::date)
-       ORDER BY a.start_date`,
-      [employeeId, startDate, endDate]
-    );
-
-    return result.rows;
   }
 }
 

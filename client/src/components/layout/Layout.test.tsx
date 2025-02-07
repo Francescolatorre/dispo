@@ -28,10 +28,6 @@ describe('Layout Component', () => {
     const nav = screen.getByTestId('main-navigation');
     expect(nav).toBeInTheDocument();
     expect(within(nav).getByText('Dashboard')).toBeInTheDocument();
-    
-    // Check for app bar
-    const header = screen.getByRole('banner');
-    expect(within(header).getByText('DispoMVP')).toBeInTheDocument();
   });
 
   it('has proper structure', () => {
@@ -47,9 +43,6 @@ describe('Layout Component', () => {
     
     // Check for navigation drawer
     expect(screen.getByTestId('main-navigation')).toBeInTheDocument();
-    
-    // Check for app bar
-    expect(screen.getByRole('banner')).toBeInTheDocument();
   });
 
   it('applies correct spacing', () => {
@@ -63,6 +56,5 @@ describe('Layout Component', () => {
     const computedStyle = window.getComputedStyle(main);
     expect(computedStyle.padding).toBeDefined();
     expect(computedStyle.boxSizing).toBe('border-box');
-    expect(main.className).toMatch(/MuiBox-root/);
   });
 });

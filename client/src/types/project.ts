@@ -1,3 +1,6 @@
+export const PROJECT_STATUSES = ['active', 'archived'] as const;
+export type ProjectStatus = typeof PROJECT_STATUSES[number];
+
 export interface Project {
   id: number;
   name: string;
@@ -7,17 +10,12 @@ export interface Project {
   location: string;
   fte_count: number;
   project_manager_id: number;
-  project_manager_name?: string; // Optional field for UI display
   documentation_links: string[];
   status: ProjectStatus;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
-export type NewProject = Omit<Project, 'id' | 'created_at' | 'updated_at'>;
-
-export type UpdateProject = Omit<Project, 'id' | 'created_at' | 'updated_at'>;
-
-export type ProjectStatus = 'active' | 'archived';
-
-export const PROJECT_STATUSES: ProjectStatus[] = ['active', 'archived'];
+export type NewProject = Omit<Project, 'id' | 'project_number' | 'location' | 'fte_count' | 'created_at' | 'updated_at'> & {
+  project_manager: string;
+};

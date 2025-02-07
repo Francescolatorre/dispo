@@ -1,33 +1,37 @@
 import { useState, useEffect } from 'react';
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Input,
   Button,
   FormControl,
-  InputLabel,
+  FormLabel,
   Select,
-  MenuItem,
   Box,
-  Chip,
+  Tag,
+  TagLabel,
+  TagCloseButton,
   IconButton,
-  InputAdornment,
-} from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import DeleteIcon from '@mui/icons-material/Delete';
-import { Project, NewProject, PROJECT_STATUSES } from '../../types/project';
+  InputGroup,
+  InputRightElement,
+  FormErrorMessage,
+} from '@chakra-ui/react';
+import { AddIcon, DeleteIcon } from '@chakra-ui/icons';
+import { Project, NewProject, PROJECT_STATUSES, ProjectStatus } from '../../types/project';
 
 interface ProjectFormProps {
-  open: boolean;
+  isOpen: boolean;
   onClose: () => void;
   onSave: (project: NewProject) => Promise<void>;
   project?: Project;
 }
 
 export const ProjectForm = ({
-  open,
+  isOpen,
   onClose,
   onSave,
   project,
@@ -36,6 +40,7 @@ export const ProjectForm = ({
     name: '',
     start_date: new Date().toISOString().split('T')[0],
     end_date: '',
+    project_manager_id: 0,
     project_manager: '',
     documentation_links: [],
     status: 'active',
@@ -49,7 +54,8 @@ export const ProjectForm = ({
         name: project.name,
         start_date: project.start_date.split('T')[0],
         end_date: project.end_date.split('T')[0],
-        project_manager: project.project_manager,
+        project_manager: project.project_manager_id.toString(),
+        project_manager_id: project.project_manager_id,
         documentation_links: project.documentation_links,
         status: project.status,
       });
@@ -59,6 +65,7 @@ export const ProjectForm = ({
         start_date: new Date().toISOString().split('T')[0],
         end_date: '',
         project_manager: '',
+        project_manager_id: 0,
         documentation_links: [],
         status: 'active',
       });
@@ -76,15 +83,38 @@ export const ProjectForm = ({
     return true;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
     if (!validateDates()) {
       return;
     }
 
-    await onSave(formData);
+    // Convert project_manager to project_manager_id if needed
+    const projectData: NewProject = {
+      ...formData,
+      project_manager_id: parseInt(formData.project_manager) || formData.project_manager_id,
+    };
+
+    await onSave(projectData);
     onClose();
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value,
+      ...(name === 'project_manager' ? { project_manager_id: parseInt(value) || 0 } : {}),
+    }));
+  };
+
+  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   const handleAddLink = () => {
@@ -107,129 +137,134 @@ export const ProjectForm = ({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <form onSubmit={handleSubmit}>
-        <DialogTitle>
-          {project ? 'Projekt bearbeiten' : 'Neues Projekt'}
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-            <TextField
-              label="Name"
-              value={formData.name}
-              onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
-              }
-              required
-              fullWidth
-            />
-
-            <TextField
-              label="Projektleiter"
-              value={formData.project_manager}
-              onChange={(e) =>
-                setFormData({ ...formData, project_manager: e.target.value })
-              }
-              required
-              fullWidth
-            />
-
-            <TextField
-              label="Start-Datum"
-              type="date"
-              value={formData.start_date}
-              onChange={(e) =>
-                setFormData({ ...formData, start_date: e.target.value })
-              }
-              required
-              InputLabelProps={{
-                shrink: true,
-              }}
-            />
-
-            <TextField
-              id="end_date"
-              label="End-Datum"
-              type="date"
-              value={formData.end_date}
-              onChange={(e) => {
-                setFormData({ ...formData, end_date: e.target.value });
-                setEndDateError('');
-              }}
-              required
-              error={!!endDateError}
-              helperText={endDateError}
-              aria-invalid={!!endDateError}
-              InputLabelProps={{
-                shrink: true,
-              }}
-            />
-
-            <FormControl fullWidth>
-              <InputLabel id="status-label">Status</InputLabel>
-              <Select
-                labelId="status-label"
-                id="status"
-                value={formData.status}
-                label="Status"
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    status: e.target.value as 'active' | 'archived',
-                  })
-                }
-              >
-                {PROJECT_STATUSES.map((status) => (
-                  <MenuItem key={status} value={status}>
-                    {status === 'active' ? 'Aktiv' : 'Archiviert'}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            <TextField
-              label="Dokumentation Link"
-              value={newLink}
-              onChange={(e) => setNewLink(e.target.value)}
-              fullWidth
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      onClick={handleAddLink}
-                      edge="end"
-                      disabled={!newLink}
-                    >
-                      <AddIcon />
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
-
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              {formData.documentation_links.map((link, index) => (
-                <Chip
-                  key={index}
-                  label={`Link ${index + 1}`}
-                  onDelete={() => handleRemoveLink(link)}
-                  component="a"
-                  href={link}
-                  target="_blank"
-                  clickable
-                  deleteIcon={<DeleteIcon data-testid="DeleteIcon" />}
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      size="xl"
+      aria-labelledby="project-form-title"
+      aria-describedby="project-form-description"
+    >
+      <ModalOverlay />
+      <ModalContent>
+        <form onSubmit={handleSubmit}>
+          <ModalHeader id="project-form-title">
+            {project ? 'Projekt bearbeiten' : 'Neues Projekt'}
+          </ModalHeader>
+          <ModalBody id="project-form-description">
+            <Box display="flex" flexDirection="column" gap={4}>
+              <FormControl isRequired>
+                <FormLabel>Name</FormLabel>
+                <Input
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
                 />
-              ))}
+              </FormControl>
+
+              <FormControl isRequired>
+                <FormLabel>Projektleiter</FormLabel>
+                <Input
+                  name="project_manager"
+                  value={formData.project_manager}
+                  onChange={handleInputChange}
+                />
+              </FormControl>
+
+              <FormControl isRequired>
+                <FormLabel>Start-Datum</FormLabel>
+                <Input
+                  name="start_date"
+                  type="date"
+                  value={formData.start_date}
+                  onChange={handleInputChange}
+                />
+              </FormControl>
+
+              <FormControl isRequired isInvalid={!!endDateError}>
+                <FormLabel>End-Datum</FormLabel>
+                <Input
+                  name="end_date"
+                  type="date"
+                  value={formData.end_date}
+                  onChange={(e) => {
+                    handleInputChange(e);
+                    setEndDateError('');
+                  }}
+                />
+                {endDateError && <FormErrorMessage>{endDateError}</FormErrorMessage>}
+              </FormControl>
+
+              <FormControl isRequired>
+                <FormLabel>Status</FormLabel>
+                <Select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleSelectChange}
+                >
+                  {PROJECT_STATUSES.map((status) => (
+                    <option key={status} value={status}>
+                      {status === 'active' ? 'Aktiv' : 'Archiviert'}
+                    </option>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <FormControl>
+                <FormLabel>Dokumentation Link</FormLabel>
+                <InputGroup>
+                  <Input
+                    name="documentation_link"
+                    value={newLink}
+                    onChange={(e) => setNewLink(e.target.value)}
+                    placeholder="Enter documentation link"
+                  />
+                  <InputRightElement>
+                    <IconButton
+                      aria-label="Add link"
+                      icon={<AddIcon />}
+                      onClick={handleAddLink}
+                      isDisabled={!newLink}
+                      size="sm"
+                    />
+                  </InputRightElement>
+                </InputGroup>
+              </FormControl>
+
+              <Box display="flex" flexWrap="wrap" gap={2}>
+                {formData.documentation_links.map((link, index) => (
+                  <Tag
+                    key={index}
+                    size="lg"
+                    variant="subtle"
+                    colorScheme="blue"
+                    cursor="pointer"
+                    as="a"
+                    href={link}
+                    target="_blank"
+                  >
+                    <TagLabel>{`Link ${index + 1}`}</TagLabel>
+                    <TagCloseButton
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleRemoveLink(link);
+                      }}
+                      data-testid="DeleteIcon"
+                    />
+                  </Tag>
+                ))}
+              </Box>
             </Box>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose}>Abbrechen</Button>
-          <Button type="submit" variant="contained" color="primary">
-            Speichern
-          </Button>
-        </DialogActions>
-      </form>
-    </Dialog>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={onClose}>
+              Abbrechen
+            </Button>
+            <Button type="submit" colorScheme="blue">
+              Speichern
+            </Button>
+          </ModalFooter>
+        </form>
+      </ModalContent>
+    </Modal>
   );
 };

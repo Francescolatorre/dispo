@@ -1,92 +1,97 @@
-import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React from 'react';
 import {
-  AppBar,
   Box,
-  Drawer,
-  IconButton,
-  List,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Toolbar,
-  Typography,
-} from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu';
-import DashboardIcon from '@mui/icons-material/Dashboard';
-import FolderIcon from '@mui/icons-material/Folder';
-import PeopleIcon from '@mui/icons-material/People';
-import BarChartIcon from '@mui/icons-material/BarChart';
+  VStack,
+  Link,
+  Text,
+  Icon,
+  Tooltip,
+} from '@chakra-ui/react';
+import { Link as RouterLink, useLocation } from 'react-router-dom';
+import {
+  ViewIcon,
+  TimeIcon,
+  CalendarIcon,
+  StarIcon,
+  SettingsIcon,
+} from '@chakra-ui/icons';
 
-const drawerWidth = 240;
+interface NavItemProps {
+  to: string;
+  icon: React.ElementType;
+  label: string;
+  isActive: boolean;
+}
 
-export const Navigation = () => {
-  const [mobileOpen, setMobileOpen] = useState(false);
+const NavItem: React.FC<NavItemProps> = ({ to, icon, label, isActive }) => (
+  <Tooltip label={label} placement="right" hasArrow>
+    <Link
+      as={RouterLink}
+      to={to}
+      _hover={{ textDecoration: 'none' }}
+      w="full"
+      data-testid={`nav-${label.toLowerCase()}`}
+    >
+      <Box
+        py={3}
+        px={4}
+        bg={isActive ? 'blue.500' : 'transparent'}
+        color={isActive ? 'white' : 'gray.600'}
+        _hover={{
+          bg: isActive ? 'blue.600' : 'gray.100',
+        }}
+        borderRadius="md"
+      >
+        <Icon as={icon} boxSize={5} />
+        <Text
+          display={{ base: 'none', lg: 'block' }}
+          ml={{ lg: 3 }}
+          fontSize="sm"
+        >
+          {label}
+        </Text>
+      </Box>
+    </Link>
+  </Tooltip>
+);
+
+export const Navigation: React.FC = () => {
   const location = useLocation();
 
-  const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen);
-  };
-
-  const menuItems = [
-    { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
-    { text: 'Projekte', icon: <FolderIcon />, path: '/projects' },
-    { text: 'Mitarbeiter', icon: <PeopleIcon />, path: '/employees' },
-    { text: 'Berichte', icon: <BarChartIcon />, path: '/reports' },
+  const navItems = [
+    { to: '/dashboard', icon: ViewIcon, label: 'Dashboard' },
+    { to: '/projects', icon: StarIcon, label: 'Projects' },
+    { to: '/employees', icon: SettingsIcon, label: 'Employees' },
+    { to: '/reports', icon: TimeIcon, label: 'Reports' },
+    { to: '/timeline-demo', icon: CalendarIcon, label: 'Timeline Demo' },
   ];
 
-  const drawer = (
-    <Box sx={{ overflow: 'auto' }} component="nav" data-testid="main-navigation">
-      <List>
-        {menuItems.map((item) => {
-          const isSelected = location.pathname === item.path;
-          return (
-            <ListItemButton
-              key={item.text}
-              component={Link}
-              to={item.path}
-              selected={isSelected}
-              aria-current={isSelected ? 'page' : undefined}
-            >
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.text} />
-            </ListItemButton>
-          );
-        })}
-      </List>
-    </Box>
-  );
-
   return (
-    <Box sx={{ display: 'flex' }}>
-      <AppBar position="fixed">
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            aria-label="Navigation öffnen"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2 }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h6" noWrap>
-            DispoMVP
-          </Typography>
-        </Toolbar>
-      </AppBar>
-      <Box component="nav" sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}>
-        <Drawer
-          variant="permanent"
-          sx={{
-            display: { xs: 'none', sm: 'block' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
-          }}
-          open
-        >
-          {drawer}
-        </Drawer>
-      </Box>
+    <Box
+      as="nav"
+      data-testid="main-navigation"
+      h="100vh"
+      w={{ base: '16', lg: '64' }}
+      py={5}
+      bg="white"
+      borderRight="1px"
+      borderColor="gray.200"
+      position="sticky"
+      top={0}
+    >
+      <VStack spacing={2} align="stretch" px={2}>
+        {navItems.map((item) => (
+          <NavItem
+            key={item.to}
+            to={item.to}
+            icon={item.icon}
+            label={item.label}
+            isActive={location.pathname === item.to}
+          />
+        ))}
+      </VStack>
     </Box>
   );
 };
+
+export default Navigation;

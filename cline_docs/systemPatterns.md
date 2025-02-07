@@ -6,7 +6,9 @@
 1. **Component Structure**
    - Wiederverwendbare UI-Komponenten
    - Container/Präsentations-Komponenten Pattern
-   - Material-UI für konsistentes Design
+   - Chakra UI für neue Komponenten und konsistentes Design
+   - Material-UI für bestehende Komponenten
+   - Dual Provider Setup für Komponentenkompatibilität
 
 2. **State Management**
    - Lokaler State für UI-Komponenten
@@ -57,10 +59,14 @@
 ## Key Technical Decisions
 
 ### Frontend
-1. **React & Material-UI**
+1. **React with Chakra UI & Material-UI**
+   - Primär Chakra UI für neue Komponenten
+   - Material-UI für Legacy-Komponenten
    - Schnelle Entwicklung durch vorgefertigte Komponenten
-   - Konsistentes Look & Feel
+   - Konsistentes Look & Feel durch Theme Provider
    - Responsive Design out of the box
+   - Chakra UI für moderne, zugängliche Komponenten
+   - Material-UI für Kompatibilität mit bestehenden Komponenten
 
 2. **CSV Handling**
    - Papa Parse für zuverlässiges CSV Parsing

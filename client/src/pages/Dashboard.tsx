@@ -1,14 +1,14 @@
-import { Typography } from '@mui/material';
+import { Heading, Text } from '@chakra-ui/react';
 
 export const Dashboard = () => {
   return (
     <>
-      <Typography variant="h4" gutterBottom>
+      <Heading as="h2" size="lg" mb={4}>
         Dashboard
-      </Typography>
-      <Typography variant="body1">
+      </Heading>
+      <Text>
         Willkommen im DispoMVP Dashboard. Hier finden Sie eine Übersicht über alle wichtigen Informationen.
-      </Typography>
+      </Text>
     </>
   );
 };

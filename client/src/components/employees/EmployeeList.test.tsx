@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { EmployeeList } from './EmployeeList';
 import { employeeService } from '../../services/employeeService';
 import { vi } from 'vitest';
@@ -27,10 +27,10 @@ const mockEmployees = [
 describe('EmployeeList', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (employeeService.getAll as any).mockResolvedValue(mockEmployees);
   });
 
   it('renders employee list with data', async () => {
+    (employeeService.getAll as any).mockResolvedValue(mockEmployees);
     render(<EmployeeList onEdit={() => {}} />);
 
     // Check if employee data is displayed
@@ -43,6 +43,7 @@ describe('EmployeeList', () => {
 
   it('calls onEdit when edit button is clicked', async () => {
     const mockOnEdit = vi.fn();
+    (employeeService.getAll as any).mockResolvedValue(mockEmployees);
     render(<EmployeeList onEdit={mockOnEdit} />);
 
     // Wait for data to load
@@ -60,6 +61,7 @@ describe('EmployeeList', () => {
     const mockConfirm = vi.spyOn(window, 'confirm');
     mockConfirm.mockImplementation(() => true);
 
+    (employeeService.getAll as any).mockResolvedValue(mockEmployees);
     render(<EmployeeList onEdit={() => {}} />);
 
     // Wait for data to load
@@ -74,11 +76,10 @@ describe('EmployeeList', () => {
   });
 
   it('shows error message when loading fails', async () => {
-    const error = new Error('Failed to load');
-    (employeeService.getAll as any).mockRejectedValue(error);
-
+    (employeeService.getAll as any).mockRejectedValue(new Error('Failed to load'));
     render(<EmployeeList onEdit={() => {}} />);
-
-    expect(await screen.findByText('Error: Failed to load employees')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Error loading employees: Failed to load')).toBeInTheDocument();
+    });
   });
 });

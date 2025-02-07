@@ -1,4 +1,4 @@
-import { Box, AppBar, Toolbar, Typography } from '@mui/material';
+import { Box } from '@chakra-ui/react';
 import { Navigation } from './Navigation';
 
 interface LayoutProps {
@@ -7,18 +7,16 @@ interface LayoutProps {
 
 export const Layout = ({ children }: LayoutProps) => {
   return (
-    <Box sx={{ display: 'flex' }}>
+    <Box display="flex">
       <Navigation />
       <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          p: 3,
-          width: '100%',
-          boxSizing: 'border-box',
-        }}
+        as="main"
+        role="main"
+        flexGrow={1}
+        p={4}
+        width="100%"
+        boxSizing="border-box"
       >
-        <Toolbar />
         {children}
       </Box>
     </Box>

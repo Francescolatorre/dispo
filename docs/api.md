@@ -1,337 +1,223 @@
-# API Documentation
-
-## Overview
-
-The DispoMVP API is organized around REST. Our API accepts JSON-encoded request bodies, returns JSON-encoded responses, and uses standard HTTP response codes and authentication.
+# DispoMVP API Documentation
 
 ## Base URL
-
-```
-http://localhost:3000/api
-```
+All API endpoints are relative to: `http://localhost:3000/api`
 
 ## Authentication
-
-Authentication is handled via JWT tokens. Include the token in the Authorization header:
-
+Authentication is required for all endpoints. Send an Authorization header with a valid JWT token:
 ```
-Authorization: Bearer <your-token>
+Authorization: Bearer <token>
 ```
 
-## Endpoints
-
-### Users
-
-#### POST /api/users
-Create a new user (Admin only).
-
-**Request Body**
+## Error Handling
+All endpoints follow the same error response format:
 ```json
 {
-  "username": "string",
-  "password": "string",
-  "role": "string" // "admin" or "project_leader"
-}
-```
-
-### Employees
-
-#### GET /api/employees
-List all employees.
-
-**Response**
-```json
-{
-  "employees": [
-    {
-      "id": "string",
-      "name": "string",
-      "personnelNumber": "string",
-      "entryDate": "string",
-      "contractEndDate": "string",
-      "email": "string",
-      "phone": "string",
-      "qualifications": {
-        "technicalSkills": [
-          {
-            "name": "string",
-            "level": number // 1-5
-          }
-        ],
-        "certifications": [
-          {
-            "name": "string",
-            "validUntil": "string"
-          }
-        ],
-        "languages": [
-          {
-            "language": "string",
-            "level": "string"
-          }
-        ],
-        "softSkills": ["string"]
-      }
-    }
-  ]
-}
-```
-
-#### POST /api/employees
-Create a new employee.
-
-**Request Body**
-```json
-{
-  "name": "string",
-  "personnelNumber": "string",
-  "entryDate": "string",
-  "contractEndDate": "string",
-  "email": "string",
-  "phone": "string",
-  "qualifications": {
-    "technicalSkills": [],
-    "certifications": [],
-    "languages": [],
-    "softSkills": []
+  "error": {
+    "message": "Error description",
+    "code": "ERROR_CODE"
   }
 }
 ```
 
+## Endpoints
+
 ### Projects
 
-#### GET /api/projects
+#### GET /projects
 List all projects.
 
-**Query Parameters**
-- `includeArchived` (boolean): Include archived projects in response
+**Response**
+```json
+[
+  {
+    "id": 1,
+    "name": "Project A",
+    "description": "Project description",
+    "start_date": "2024-01-01",
+    "end_date": "2024-12-31",
+    "status": "active"
+  }
+]
+```
+
+#### GET /projects/:id
+Get project details.
 
 **Response**
 ```json
 {
-  "projects": [
-    {
-      "id": "string",
-      "name": "string",
-      "description": "string",
-      "startDate": "string",
-      "endDate": "string",
-      "projectLeader": "string",
-      "documentationLinks": ["string"],
-      "isArchived": boolean,
-      "status": "string"
-    }
-  ]
-}
-```
-
-#### POST /api/projects
-Create a new project.
-
-**Request Body**
-```json
-{
-  "name": "string",
-  "description": "string",
-  "startDate": "string",
-  "endDate": "string",
-  "projectLeader": "string",
-  "documentationLinks": ["string"]
-}
-```
-
-#### PATCH /api/projects/{id}/archive
-Archive a project.
-
-### Requirements
-
-#### GET /api/requirements
-List all requirements.
-
-**Response**
-```json
-{
-  "requirements": [
-    {
-      "id": "string",
-      "projectId": "string",
-      "description": "string",
-      "priority": "string",
-      "status": "string"
-    }
-  ]
-}
-```
-
-#### POST /api/requirements
-Create a new requirement.
-
-**Request Body**
-```json
-{
-  "projectId": "string",
-  "description": "string",
-  "priority": "string"
+  "id": 1,
+  "name": "Project A",
+  "description": "Project description",
+  "start_date": "2024-01-01",
+  "end_date": "2024-12-31",
+  "status": "active"
 }
 ```
 
 ### Assignments
 
-#### GET /api/assignments
-List all assignments.
+#### GET /assignments
+List assignments with optional filters.
+
+**Query Parameters**
+- `projectId`: Filter by project ID
+- `employeeId`: Filter by employee ID
+- `status`: Filter by status (active, completed, cancelled)
+- `startDate`: Filter by start date
+- `endDate`: Filter by end date
 
 **Response**
 ```json
-{
-  "assignments": [
-    {
-      "id": "string",
-      "employeeId": "string",
-      "projectId": "string",
-      "requirementId": "string",
-      "startDate": "string",
-      "endDate": "string",
-      "workload": number // percentage
-    }
-  ]
-}
+[
+  {
+    "id": 1,
+    "project_id": 1,
+    "employee_id": 1,
+    "role": "Developer",
+    "start_date": "2024-01-01",
+    "end_date": "2024-03-31",
+    "allocation_percentage": 100,
+    "status": "active",
+    "project_name": "Project A",
+    "employee_name": "John Doe"
+  }
+]
 ```
 
-#### POST /api/assignments
+#### POST /assignments
 Create a new assignment.
 
 **Request Body**
 ```json
 {
-  "employeeId": "string",
-  "projectId": "string",
-  "requirementId": "string",
-  "startDate": "string",
-  "endDate": "string",
-  "workload": number
+  "project_id": 1,
+  "employee_id": 1,
+  "role": "Developer",
+  "start_date": "2024-01-01",
+  "end_date": "2024-03-31",
+  "allocation_percentage": 100,
+  "status": "active"
 }
 ```
-
-### Absences
-
-#### GET /api/absences
-List all absences.
-
-**Query Parameters**
-- `employeeId` (string): Filter by employee
-- `startDate` (string): Filter by start date
-- `endDate` (string): Filter by end date
 
 **Response**
 ```json
 {
-  "absences": [
-    {
-      "id": "string",
-      "employeeId": "string",
-      "type": "string", // "vacation", "sick", "training", "special"
-      "startDate": "string",
-      "endDate": "string",
-      "description": "string"
-    }
-  ]
+  "id": 1,
+  "project_id": 1,
+  "employee_id": 1,
+  "role": "Developer",
+  "start_date": "2024-01-01",
+  "end_date": "2024-03-31",
+  "allocation_percentage": 100,
+  "status": "active"
 }
 ```
 
-#### POST /api/absences
-Create a new absence.
+#### PUT /assignments/:id
+Update an existing assignment.
 
 **Request Body**
 ```json
 {
-  "employeeId": "string",
-  "type": "string",
-  "startDate": "string",
-  "endDate": "string",
-  "description": "string"
+  "role": "Senior Developer",
+  "allocation_percentage": 80
 }
 ```
-
-### Reports
-
-#### GET /api/reports/resource-utilization
-Get resource utilization report.
-
-**Query Parameters**
-- `startDate` (string): Start of reporting period
-- `endDate` (string): End of reporting period
-- `teamId` (string, optional): Filter by team
 
 **Response**
 ```json
 {
-  "employees": [
-    {
-      "id": "string",
-      "name": "string",
-      "utilization": number,
-      "assignments": [
-        {
-          "projectId": "string",
-          "workload": number,
-          "period": {
-            "start": "string",
-            "end": "string"
-          }
-        }
-      ],
-      "absences": [
-        {
-          "type": "string",
-          "period": {
-            "start": "string",
-            "end": "string"
-          }
-        }
-      ]
-    }
-  ]
+  "id": 1,
+  "project_id": 1,
+  "employee_id": 1,
+  "role": "Senior Developer",
+  "start_date": "2024-01-01",
+  "end_date": "2024-03-31",
+  "allocation_percentage": 80,
+  "status": "active"
 }
 ```
 
-### Data Import/Export
-
-#### POST /api/import/csv
-Import data from CSV.
+#### POST /assignments/validate
+Validate assignment data.
 
 **Request Body**
+```json
+{
+  "project_id": 1,
+  "employee_id": 1,
+  "start_date": "2024-01-01",
+  "end_date": "2024-03-31",
+  "allocation_percentage": 100
+}
 ```
-multipart/form-data
-- file: CSV file
-- type: "employees" | "projects" | "assignments" | "absences"
+
+**Response**
+```json
+{
+  "isValid": true,
+  "errors": {},
+  "warning": false,
+  "message": null
+}
 ```
 
-#### GET /api/export/csv
-Export data to CSV.
+### Employees
 
-**Query Parameters**
-- `type`: "employees" | "projects" | "assignments" | "absences"
-- `startDate` (optional): Filter by start date
-- `endDate` (optional): Filter by end date
+#### GET /employees
+List all employees.
 
-## Error Handling
+**Response**
+```json
+[
+  {
+    "id": 1,
+    "name": "John Doe",
+    "email": "john@example.com",
+    "role": "Developer",
+    "status": "active"
+  }
+]
+```
 
-The API uses conventional HTTP response codes to indicate the success or failure of an API request:
+#### GET /employees/:id/assignments
+Get employee assignments.
+
+**Response**
+```json
+[
+  {
+    "id": 1,
+    "project_id": 1,
+    "employee_id": 1,
+    "role": "Developer",
+    "start_date": "2024-01-01",
+    "end_date": "2024-03-31",
+    "allocation_percentage": 100,
+    "status": "active",
+    "project_name": "Project A"
+  }
+]
+```
+
+## Status Codes
 
 - 200: Success
-- 400: Bad request
+- 201: Created
+- 400: Bad Request
 - 401: Unauthorized
 - 403: Forbidden
-- 404: Not found
-- 409: Conflict
-- 500: Internal server error
+- 404: Not Found
+- 500: Internal Server Error
 
-Error responses include a message providing more details about the error:
+## Rate Limiting
 
-```json
-{
-  "error": {
-    "code": "string",
-    "message": "string"
-  }
-}
+API requests are limited to 100 requests per minute per IP address. The following headers are included in all responses:
+
+```
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 99
+X-RateLimit-Reset: 1612345678

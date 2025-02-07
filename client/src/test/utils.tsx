@@ -1,15 +1,18 @@
 import { ReactElement } from 'react';
 import { render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { ThemeProvider } from '@mui/material/styles';
-import { theme } from '../styles/theme';
+import { ChakraProvider, createStandaloneToast } from '@chakra-ui/react';
+import theme from '../theme';
+
+const { ToastContainer } = createStandaloneToast();
 
 export function renderWithProviders(ui: ReactElement, { route = '/' } = {}) {
   return render(
     <MemoryRouter initialEntries={[route]}>
-      <ThemeProvider theme={theme}>
+      <ChakraProvider theme={theme}>
         {ui}
-      </ThemeProvider>
+        <ToastContainer />
+      </ChakraProvider>
     </MemoryRouter>
   );
 }

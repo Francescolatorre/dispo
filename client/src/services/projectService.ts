@@ -1,77 +1,49 @@
-import { Project, NewProject, UpdateProject } from '../types/project';
+import axios from 'axios';
+import type { Project } from '../types/project';
+
+const API_BASE_URL = '/api';
 
 class ProjectService {
-  private baseUrl = '/api/projects';
-
-  async getAll(): Promise<Project[]> {
-    const response = await fetch(this.baseUrl);
-    if (!response.ok) {
-      throw new Error('Failed to load projects');
-    }
-    return response.json();
+  /**
+   * Get all projects
+   */
+  async getProjects(): Promise<Project[]> {
+    const response = await axios.get(`${API_BASE_URL}/projects`);
+    return response.data;
   }
 
-  async getById(id: number): Promise<Project> {
-    const response = await fetch(`${this.baseUrl}/${id}`);
-    if (!response.ok) {
-      throw new Error('Failed to load project');
-    }
-    return response.json();
+  /**
+   * Get project by ID
+   */
+  async getProjectById(id: number): Promise<Project> {
+    const response = await axios.get(`${API_BASE_URL}/projects/${id}`);
+    return response.data;
   }
 
-  async create(project: NewProject): Promise<Project> {
-    const response = await fetch(this.baseUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(project),
-    });
-    if (!response.ok) {
-      throw new Error('Failed to create project');
-    }
-    return response.json();
+  /**
+   * Create a new project
+   */
+  async createProject(data: Omit<Project, 'id' | 'created_at' | 'updated_at'>): Promise<Project> {
+    const response = await axios.post(`${API_BASE_URL}/projects`, data);
+    return response.data;
   }
 
-  async update(id: number, project: UpdateProject): Promise<Project> {
-    const response = await fetch(`${this.baseUrl}/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(project),
-    });
-    if (!response.ok) {
-      throw new Error('Failed to update project');
-    }
-    return response.json();
+  /**
+   * Update a project
+   */
+  async updateProject(
+    id: number,
+    data: Partial<Omit<Project, 'id' | 'created_at' | 'updated_at'>>
+  ): Promise<Project> {
+    const response = await axios.patch(`${API_BASE_URL}/projects/${id}`, data);
+    return response.data;
   }
 
-  async delete(id: number): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/${id}`, {
-      method: 'DELETE',
-    });
-    if (!response.ok) {
-      throw new Error('Failed to delete project');
-    }
-  }
-
-  async archive(id: number): Promise<Project> {
-    const response = await fetch(`${this.baseUrl}/${id}/archive`, {
-      method: 'POST',
-    });
-    if (!response.ok) {
-      throw new Error('Failed to archive project');
-    }
-    return response.json();
-  }
-
-  async getArchived(): Promise<Project[]> {
-    const response = await fetch(`${this.baseUrl}/archived`);
-    if (!response.ok) {
-      throw new Error('Failed to load archived projects');
-    }
-    return response.json();
+  /**
+   * Delete a project
+   */
+  async deleteProject(id: number): Promise<void> {
+    await axios.delete(`${API_BASE_URL}/projects/${id}`);
   }
 }
 

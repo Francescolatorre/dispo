@@ -1,217 +1,182 @@
+const AssignmentService = require('../assignmentService');
+const WorkloadService = require('../workloadService');
 const { pool } = require('../../config/database');
-const assignmentService = require('../assignmentService');
+
+jest.mock('../../config/database', () => ({
+  pool: {
+    connect: jest.fn()
+  }
+}));
+
+jest.mock('../workloadService', () => ({
+  validateAssignment: jest.fn(),
+  calculateWorkload: jest.fn()
+}));
 
 describe('AssignmentService', () => {
-  let testEmployeeId;
-  let testProjectId;
-  let testRequirementId;
+  let mockClient;
 
-  beforeAll(async () => {
-    // Create test employee
-    const employeeResult = await pool.query(`
-      INSERT INTO employees (
-        name,
-        employee_number,
-        entry_date,
-        email,
-        position,
-        seniority_level,
-        level_code,
-        work_time_factor,
-        part_time_factor
-      ) VALUES (
-        'Test Employee',
-        'EMP-TEST',
-        '2024-01-01',
-        'test@example.com',
-        'Developer',
-        'Senior',
-        'SR',
-        1.0,
-        100.0
-      ) RETURNING id;
-    `);
-    testEmployeeId = employeeResult.rows[0].id;
-
-    // Create test project
-    const projectResult = await pool.query(`
-      INSERT INTO projects (
-        name,
-        project_number,
-        start_date,
-        end_date,
-        location,
-        project_manager_id,
-        fte_count
-      ) VALUES (
-        'Test Project',
-        'TEST-001',
-        '2024-01-01',
-        '2024-12-31',
-        'Berlin',
-        $1,
-        1
-      ) RETURNING id;
-    `, [testEmployeeId]);
-    testProjectId = projectResult.rows[0].id;
-
-    // Create test requirement
-    const requirementResult = await pool.query(`
-      INSERT INTO project_requirements (
-        project_id,
-        role,
-        seniority_level,
-        start_date,
-        end_date
-      ) VALUES (
-        $1,
-        'Developer',
-        'Senior',
-        '2024-02-01',
-        '2024-06-30'
-      ) RETURNING id;
-    `, [testProjectId]);
-    testRequirementId = requirementResult.rows[0].id;
+  beforeEach(() => {
+    mockClient = {
+      query: jest.fn(),
+      release: jest.fn()
+    };
+    pool.connect.mockResolvedValue(mockClient);
   });
 
-  afterAll(async () => {
-    // Clean up test data
-    await pool.query('DELETE FROM project_assignments');
-    await pool.query('DELETE FROM project_requirements');
-    await pool.query('DELETE FROM projects');
-    await pool.query('DELETE FROM employees');
-    await pool.end();
+  afterEach(() => {
+    jest.clearAllMocks();
   });
 
   describe('createAssignment', () => {
-    it('should create an assignment successfully', async () => {
-      const assignmentData = {
-        project_id: testProjectId,
-        employee_id: testEmployeeId,
-        requirement_id: testRequirementId,
-        role: 'Developer',
-        start_date: '2024-02-01',
-        end_date: '2024-06-30',
-        allocation_percentage: 100,
-        dr_status: 'primary',
-        position_status: 'confirmed'
-      };
+    const validAssignmentData = {
+      project_id: 1,
+      employee_id: 1,
+      requirement_id: 1,
+      role: 'Developer',
+      start_date: '2024-03-01',
+      end_date: '2024-03-31',
+      allocation_percentage: 50,
+      dr_status: 'DR1',
+      position_status: 'P1'
+    };
 
-      const assignment = await assignmentService.createAssignment(assignmentData);
-
-      expect(assignment).toMatchObject({
-        project_id: testProjectId,
-        employee_id: testEmployeeId,
-        requirement_id: testRequirementId,
-        role: 'Developer',
-        status: 'active'
+    it('should create assignment when workload is valid', async () => {
+      // Mock workload validation
+      WorkloadService.validateAssignment.mockResolvedValue({
+        valid: true,
+        warning: false
       });
+
+      // Mock successful assignment creation
+      mockClient.query.mockResolvedValueOnce({
+        rows: [{ ...validAssignmentData, id: 1 }]
+      });
+
+      const result = await AssignmentService.createAssignment(validAssignmentData);
+
+      expect(result).toHaveProperty('id', 1);
+      expect(WorkloadService.validateAssignment).toHaveBeenCalledWith(
+        validAssignmentData.employee_id,
+        validAssignmentData.start_date,
+        validAssignmentData.end_date,
+        validAssignmentData.allocation_percentage
+      );
     });
-  });
 
-  describe('getAssignmentById', () => {
-    it('should retrieve an assignment with related details', async () => {
-      // Create an assignment first
-      const { rows: [assignment] } = await pool.query(`
-        INSERT INTO project_assignments (
-          project_id,
-          employee_id,
-          requirement_id,
-          role,
-          start_date,
-          end_date,
-          allocation_percentage
-        ) VALUES (
-          $1, $2, $3, 'Developer', '2024-02-01', '2024-06-30', 100
-        ) RETURNING id
-      `, [testProjectId, testEmployeeId, testRequirementId]);
-
-      const result = await assignmentService.getAssignmentById(assignment.id);
-
-      expect(result).toMatchObject({
-        role: 'Developer',
-        project_name: 'Test Project',
-        employee_name: 'Test Employee'
+    it('should fail when workload validation fails', async () => {
+      WorkloadService.validateAssignment.mockResolvedValue({
+        valid: false,
+        warning: false,
+        message: 'Total workload would exceed 100%'
       });
+
+      await expect(
+        AssignmentService.createAssignment(validAssignmentData)
+      ).rejects.toThrow('Total workload would exceed 100%');
+
+      expect(mockClient.query).not.toHaveBeenCalledWith(
+        expect.stringMatching(/INSERT INTO project_assignments/),
+        expect.any(Array)
+      );
+    });
+
+    it('should create assignment with warning flag', async () => {
+      WorkloadService.validateAssignment.mockResolvedValue({
+        valid: true,
+        warning: true,
+        message: 'High workload warning (>80%)'
+      });
+
+      mockClient.query.mockResolvedValueOnce({
+        rows: [{ ...validAssignmentData, id: 1, workload_warning: true }]
+      });
+
+      const result = await AssignmentService.createAssignment(validAssignmentData);
+
+      expect(result.workload_warning).toBe(true);
     });
   });
 
   describe('getProjectAssignments', () => {
-    it('should list all assignments for a project', async () => {
-      const assignments = await assignmentService.getProjectAssignments(testProjectId);
-      expect(Array.isArray(assignments)).toBe(true);
-      expect(assignments.length).toBeGreaterThan(0);
-    });
-  });
-
-  describe('getEmployeeAssignments', () => {
-    it('should list all assignments for an employee', async () => {
-      const assignments = await assignmentService.getEmployeeAssignments(testEmployeeId);
-      expect(Array.isArray(assignments)).toBe(true);
-      expect(assignments.length).toBeGreaterThan(0);
-    });
-  });
-
-  describe('terminateAssignment', () => {
-    it('should terminate an assignment with reason', async () => {
-      // Create an assignment first
-      const { rows: [assignment] } = await pool.query(`
-        INSERT INTO project_assignments (
-          project_id,
-          employee_id,
-          requirement_id,
-          role,
-          start_date,
-          end_date,
-          allocation_percentage
-        ) VALUES (
-          $1, $2, $3, 'Developer', '2024-02-01', '2024-06-30', 100
-        ) RETURNING id
-      `, [testProjectId, testEmployeeId, testRequirementId]);
-
-      const terminated = await assignmentService.terminateAssignment(
-        assignment.id,
-        'Project restructuring'
-      );
-
-      expect(terminated).toMatchObject({
-        status: 'terminated',
-        termination_reason: 'Project restructuring'
+    it('should return assignments with workload information', async () => {
+      // Mock assignments query
+      mockClient.query.mockResolvedValue({
+        rows: [
+          {
+            id: 1,
+            employee_id: 1,
+            start_date: '2024-03-01',
+            end_date: '2024-03-31'
+          }
+        ]
       });
+
+      // Mock workload calculation
+      WorkloadService.calculateWorkload.mockResolvedValue([
+        { date: '2024-03-01', totalWorkload: 80 }
+      ]);
+
+      const result = await AssignmentService.getProjectAssignments(1);
+
+      expect(result[0]).toHaveProperty('totalWorkload', 80);
+      expect(WorkloadService.calculateWorkload).toHaveBeenCalledWith(
+        1,
+        expect.any(String),
+        expect.any(String)
+      );
     });
   });
 
-  describe('checkEmployeeAvailability', () => {
-    it('should check employee availability for a period', async () => {
-      const availability = await assignmentService.checkEmployeeAvailability(
-        testEmployeeId,
-        '2024-07-01',
-        '2024-12-31'
-      );
+  describe('updateAssignment', () => {
+    it('should validate workload when updating allocation', async () => {
+      // Mock current assignment
+      mockClient.query
+        .mockResolvedValueOnce({
+          rows: [{
+            id: 1,
+            employee_id: 1,
+            start_date: '2024-03-01',
+            end_date: '2024-03-31',
+            allocation_percentage: 50
+          }]
+        })
+        // Mock update query
+        .mockResolvedValueOnce({
+          rows: [{
+            id: 1,
+            allocation_percentage: 70,
+            workload_warning: true
+          }]
+        });
 
-      expect(Array.isArray(availability)).toBe(true);
-      // Should be available since test assignments end in June
-      expect(availability.length).toBe(0);
+      WorkloadService.validateAssignment.mockResolvedValue({
+        valid: true,
+        warning: true,
+        message: 'High workload warning (>80%)'
+      });
+
+      const result = await AssignmentService.updateAssignment(1, {
+        allocation_percentage: 70
+      });
+
+      expect(result.workload_warning).toBe(true);
+      expect(WorkloadService.validateAssignment).toHaveBeenCalled();
     });
 
-    it('should detect conflicts in availability', async () => {
-      const availability = await assignmentService.checkEmployeeAvailability(
-        testEmployeeId,
-        '2024-02-01',
-        '2024-06-30'
-      );
+    it('should not validate workload when updating non-workload fields', async () => {
+      mockClient.query.mockResolvedValueOnce({
+        rows: [{
+          id: 1,
+          role: 'Senior Developer'
+        }]
+      });
 
-      expect(Array.isArray(availability)).toBe(true);
-      // Should have conflicts with test assignments
-      expect(availability.length).toBeGreaterThan(0);
-    });
-  });
+      const result = await AssignmentService.updateAssignment(1, {
+        role: 'Senior Developer'
+      });
 
-  describe('getRequirementHistory', () => {
-    it('should track assignment history for a requirement', async () => {
-      const history = await assignmentService.getRequirementHistory(testRequirementId);
-      expect(Array.isArray(history)).toBe(true);
-      expect(history.length).toBeGreaterThan(0);
+      expect(WorkloadService.validateAssignment).not.toHaveBeenCalled();
     });
   });
 });

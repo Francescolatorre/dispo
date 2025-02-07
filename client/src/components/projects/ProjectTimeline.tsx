@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Box, Paper, Typography, Tooltip } from '@mui/material';
+import { Box, Text, Tooltip } from '@chakra-ui/react';
 import { Project } from '../../types/project';
 
 interface ProjectTimelineProps {
@@ -47,8 +47,8 @@ const ProjectTimeline = ({ projects }: ProjectTimelineProps) => {
 
   if (!timelineConfig || projects.length === 0) {
     return (
-      <Box sx={{ p: 2 }}>
-        <Typography>No projects to display</Typography>
+      <Box p={2}>
+        <Text>No projects to display</Text>
       </Box>
     );
   }
@@ -68,68 +68,67 @@ const ProjectTimeline = ({ projects }: ProjectTimelineProps) => {
   };
 
   return (
-    <Box sx={{ p: 2 }}>
+    <Box p={2}>
       {/* Month scale */}
-      <Box sx={{ display: 'flex', mb: 2, borderBottom: 1, borderColor: 'divider' }}>
+      <Box display="flex" mb={2} borderBottomWidth="1px" borderColor="gray.200">
         {timelineConfig.months.map((month, index) => (
           <Box
             key={month.getTime()}
-            sx={{
-              flex: 1,
-              p: 1,
-              textAlign: 'center',
-              borderLeft: index === 0 ? 0 : 1,
-              borderColor: 'divider',
-            }}
+            flex={1}
+            p={1}
+            textAlign="center"
+            borderLeftWidth={index === 0 ? 0 : "1px"}
+            borderColor="gray.200"
           >
-            <Typography variant="caption">
+            <Text fontSize="sm" color="gray.600">
               {month.toLocaleDateString('de-DE', { month: 'short', year: 'numeric' })}
-            </Typography>
+            </Text>
           </Box>
         ))}
       </Box>
 
       {/* Projects */}
-      <Box sx={{ position: 'relative', minHeight: 200 }}>
+      <Box position="relative" minHeight="200px">
         {projects.map((project, index) => {
           const position = getProjectPosition(project);
           return (
             <Tooltip
               key={project.id}
-              title={
-                <>
-                  <Typography variant="subtitle2">{project.name}</Typography>
-                  <Typography variant="body2">
+              label={
+                <Box p={2}>
+                  <Text fontWeight="bold">{project.name}</Text>
+                  <Text fontSize="sm">
                     {new Date(project.start_date).toLocaleDateString('de-DE')} -{' '}
                     {new Date(project.end_date).toLocaleDateString('de-DE')}
-                  </Typography>
-                  <Typography variant="body2">
-                    Projektleiter: {project.project_manager_name || `ID: ${project.project_manager_id}`}
-                  </Typography>
-                </>
+                  </Text>
+                  <Text fontSize="sm">
+                    Projektleiter: {project.project_manager_id}
+                  </Text>
+                </Box>
               }
+              hasArrow
             >
-              <Paper
-                elevation={3}
-                sx={{
-                  position: 'absolute',
-                  height: 40,
-                  top: index * 50,
-                  backgroundColor: project.status === 'active' ? 'primary.main' : 'grey.500',
-                  color: 'white',
-                  display: 'flex',
-                  alignItems: 'center',
-                  px: 1,
-                  cursor: 'pointer',
-                  overflow: 'hidden',
-                  whiteSpace: 'nowrap',
-                  ...position,
-                }}
+              <Box
+                position="absolute"
+                height="40px"
+                top={`${index * 50}px`}
+                bg={project.status === 'active' ? 'primary.500' : 'gray.500'}
+                color="white"
+                display="flex"
+                alignItems="center"
+                px={2}
+                cursor="pointer"
+                overflow="hidden"
+                whiteSpace="nowrap"
+                boxShadow="md"
+                borderRadius="sm"
+                left={position.left}
+                width={position.width}
               >
-                <Typography variant="body2" noWrap>
+                <Text fontSize="sm" noOfLines={1}>
                   {project.name}
-                </Typography>
-              </Paper>
+                </Text>
+              </Box>
             </Tooltip>
           );
         })}

@@ -1,6 +1,7 @@
 # Backlog Prioritization
 
 ## Priority Levels
+
 - P1: Must have for MVP (Critical Path)
 - P2: Important but not blocking MVP
 - P3: Nice to have

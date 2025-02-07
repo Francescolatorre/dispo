@@ -1,14 +1,14 @@
-import { Typography } from '@mui/material';
+import { Heading, Text } from '@chakra-ui/react';
 
 export const Reports = () => {
   return (
     <>
-      <Typography variant="h4" gutterBottom>
+      <Heading as="h2" size="lg" mb={4}>
         Berichte
-      </Typography>
-      <Typography variant="body1">
+      </Heading>
+      <Text>
         Hier finden Sie detaillierte Auswertungen zur Ressourcenauslastung und Projektplanung.
-      </Typography>
+      </Text>
     </>
   );
 };

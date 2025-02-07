@@ -14,7 +14,10 @@ import {
   Autocomplete,
   Box,
 } from '@mui/material';
-import { Employee, SENIORITY_LEVELS, LEVEL_CODES, NewEmployee, SeniorityLevel } from '../../types/employee';
+import { Employee } from '../../types/employee';
+import { SENIORITY_LEVELS, LEVEL_CODES, SeniorityLevel, getLevelCode } from '../../constants/employeeLevels';
+
+type NewEmployee = Omit<Employee, 'id' | 'created_at' | 'updated_at'>;
 
 const COMMON_QUALIFICATIONS = [
   'JavaScript',
@@ -220,13 +223,14 @@ export const EmployeeForm = ({
                 id="seniority"
                 value={formData.seniority_level}
                 label="Seniorität"
-                onChange={(e) =>
+                onChange={(e) => {
+                  const seniorityLevel = e.target.value as SeniorityLevel;
                   setFormData({
                     ...formData,
-                    seniority_level: e.target.value as SeniorityLevel,
-                    level_code: LEVEL_CODES[e.target.value as keyof typeof LEVEL_CODES],
-                  })
-                }
+                    seniority_level: seniorityLevel,
+                    level_code: getLevelCode(seniorityLevel),
+                  });
+                }}
               >
                 {SENIORITY_LEVELS.map((level) => (
                   <MenuItem key={level} value={level}>
