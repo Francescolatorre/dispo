@@ -7,8 +7,12 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: ['./src/test/setup.ts'],
-    include: ['src/**/*.{test,spec}.{js,jsx,ts,tsx}'],
+    setupFiles: ['./src/test/setup/setup.ts'],
+    include: [
+      'src/**/*.{test,spec}.{js,jsx,ts,tsx}',
+      'src/tests/**/*.{test,spec}.{js,jsx,ts,tsx}',
+      'tests/**/*.{test,spec}.{js,jsx,ts,tsx}'
+    ],
     environmentOptions: {
       jsdom: {
         url: 'http://localhost',
@@ -17,7 +21,12 @@ export default defineConfig({
       },
     },
     deps: {
-      inline: ['@chakra-ui/react', '@emotion/react', '@emotion/styled'],
+      inline: [
+        '@chakra-ui/react',
+        '@emotion/react',
+        '@emotion/styled',
+        '@tanstack/react-query'
+      ],
       fallbackCJS: true
     },
     coverage: {
@@ -34,6 +43,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),
+      '@test': resolve(__dirname, './src/test')
     },
   },
 });
