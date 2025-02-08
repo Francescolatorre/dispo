@@ -30,6 +30,8 @@ export const Navigation: React.FC = () => {
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
 
+  const isActive = (path: string) => location.pathname === path;
+
   return (
     <Box
       as="nav"
@@ -38,6 +40,7 @@ export const Navigation: React.FC = () => {
       borderColor={borderColor}
       py={4}
       px={8}
+      data-testid="main-navigation"
     >
       <Flex justify="space-between" align="center" maxW="container.xl" mx="auto">
         <HStack spacing={8}>
@@ -46,14 +49,17 @@ export const Navigation: React.FC = () => {
               key={item.path}
               as={RouterLink}
               to={item.disabled ? '#' : item.path}
-              color={location.pathname === item.path ? 'blue.500' : 'gray.600'}
-              fontWeight={location.pathname === item.path ? 'semibold' : 'normal'}
+              color={isActive(item.path) ? 'blue.500' : 'gray.600'}
+              fontWeight={isActive(item.path) ? 'semibold' : 'normal'}
               opacity={item.disabled ? 0.5 : 1}
               cursor={item.disabled ? 'not-allowed' : 'pointer'}
               _hover={{
                 textDecoration: 'none',
                 color: item.disabled ? 'gray.600' : 'blue.500',
               }}
+              data-testid={`nav-${item.label.toLowerCase()}`}
+              aria-disabled={item.disabled}
+              className={isActive(item.path) ? 'nav-link-active' : 'nav-link'}
             >
               <Text>{item.label}</Text>
               {item.disabled && (
@@ -70,6 +76,7 @@ export const Navigation: React.FC = () => {
               variant="ghost"
               onClick={() => auth.logout()}
               colorScheme="blue"
+              data-testid="logout-button"
             >
               Logout
             </Button>
@@ -79,6 +86,7 @@ export const Navigation: React.FC = () => {
               to="/login"
               variant="solid"
               colorScheme="blue"
+              data-testid="login-button"
             >
               Login
             </Button>
