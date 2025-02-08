@@ -1,97 +1,90 @@
 import React from 'react';
-import {
-  Box,
-  VStack,
-  Link,
-  Text,
-  Icon,
-  Tooltip,
-} from '@chakra-ui/react';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 import {
-  ViewIcon,
-  TimeIcon,
-  CalendarIcon,
-  StarIcon,
-  SettingsIcon,
-} from '@chakra-ui/icons';
+  Box,
+  Flex,
+  Link,
+  Button,
+  useColorModeValue,
+  Text,
+  HStack,
+} from '@chakra-ui/react';
+import { useAuth } from '../../contexts/AuthContext';
 
-interface NavItemProps {
-  to: string;
-  icon: React.ElementType;
+interface NavItem {
   label: string;
-  isActive: boolean;
+  path: string;
+  disabled?: boolean;
 }
 
-const NavItem: React.FC<NavItemProps> = ({ to, icon, label, isActive }) => (
-  <Tooltip label={label} placement="right" hasArrow>
-    <Link
-      as={RouterLink}
-      to={to}
-      _hover={{ textDecoration: 'none' }}
-      w="full"
-      data-testid={`nav-${label.toLowerCase()}`}
-    >
-      <Box
-        py={3}
-        px={4}
-        bg={isActive ? 'blue.500' : 'transparent'}
-        color={isActive ? 'white' : 'gray.600'}
-        _hover={{
-          bg: isActive ? 'blue.600' : 'gray.100',
-        }}
-        borderRadius="md"
-      >
-        <Icon as={icon} boxSize={5} />
-        <Text
-          display={{ base: 'none', lg: 'block' }}
-          ml={{ lg: 3 }}
-          fontSize="sm"
-        >
-          {label}
-        </Text>
-      </Box>
-    </Link>
-  </Tooltip>
-);
+const navItems: NavItem[] = [
+  { label: 'Dashboard', path: '/' },
+  { label: 'Projects', path: '/projects', disabled: true },
+  { label: 'Employees', path: '/employees', disabled: true },
+  { label: 'Timeline', path: '/timeline', disabled: true },
+];
 
 export const Navigation: React.FC = () => {
+  const { isAuthenticated, auth } = useAuth();
   const location = useLocation();
-
-  const navItems = [
-    { to: '/dashboard', icon: ViewIcon, label: 'Dashboard' },
-    { to: '/projects', icon: StarIcon, label: 'Projects' },
-    { to: '/employees', icon: SettingsIcon, label: 'Employees' },
-    { to: '/reports', icon: TimeIcon, label: 'Reports' },
-    { to: '/timeline-demo', icon: CalendarIcon, label: 'Timeline Demo' },
-  ];
+  const bgColor = useColorModeValue('white', 'gray.800');
+  const borderColor = useColorModeValue('gray.200', 'gray.700');
 
   return (
     <Box
       as="nav"
-      data-testid="main-navigation"
-      h="100vh"
-      w={{ base: '16', lg: '64' }}
-      py={5}
-      bg="white"
-      borderRight="1px"
-      borderColor="gray.200"
-      position="sticky"
-      top={0}
+      bg={bgColor}
+      borderBottom="1px"
+      borderColor={borderColor}
+      py={4}
+      px={8}
     >
-      <VStack spacing={2} align="stretch" px={2}>
-        {navItems.map((item) => (
-          <NavItem
-            key={item.to}
-            to={item.to}
-            icon={item.icon}
-            label={item.label}
-            isActive={location.pathname === item.to}
-          />
-        ))}
-      </VStack>
+      <Flex justify="space-between" align="center" maxW="container.xl" mx="auto">
+        <HStack spacing={8}>
+          {navItems.map((item) => (
+            <Link
+              key={item.path}
+              as={RouterLink}
+              to={item.disabled ? '#' : item.path}
+              color={location.pathname === item.path ? 'blue.500' : 'gray.600'}
+              fontWeight={location.pathname === item.path ? 'semibold' : 'normal'}
+              opacity={item.disabled ? 0.5 : 1}
+              cursor={item.disabled ? 'not-allowed' : 'pointer'}
+              _hover={{
+                textDecoration: 'none',
+                color: item.disabled ? 'gray.600' : 'blue.500',
+              }}
+            >
+              <Text>{item.label}</Text>
+              {item.disabled && (
+                <Text fontSize="xs" color="gray.500">
+                  (Coming Soon)
+                </Text>
+              )}
+            </Link>
+          ))}
+        </HStack>
+        <Box>
+          {isAuthenticated ? (
+            <Button
+              variant="ghost"
+              onClick={() => auth.logout()}
+              colorScheme="blue"
+            >
+              Logout
+            </Button>
+          ) : (
+            <Button
+              as={RouterLink}
+              to="/login"
+              variant="solid"
+              colorScheme="blue"
+            >
+              Login
+            </Button>
+          )}
+        </Box>
+      </Flex>
     </Box>
   );
 };
-
-export default Navigation;

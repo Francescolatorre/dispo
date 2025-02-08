@@ -1,57 +1,58 @@
 import React from 'react';
-import {
-  ChakraProvider,
-  Box,
-  Flex,
-  VStack,
-} from '@chakra-ui/react';
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Navigate,
-} from 'react-router-dom';
+import { ChakraProvider } from '@chakra-ui/react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AuthProvider } from './contexts/AuthContext';
 import { Navigation } from './components/layout/Navigation';
+import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
-import { Projects } from './pages/Projects';
-import { Employees } from './pages/Employees';
-import { Reports } from './pages/Reports';
-import TimelineDemo from './pages/TimelineDemo';
 
-interface AppProps {
-  withRouter?: boolean;
-}
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
-const App: React.FC<AppProps> = ({ withRouter = true }) => {
-  const content = (
-    <Flex minH="100vh">
-      <Navigation />
-      <Box flex={1} p={8} bg="gray.50">
-        <VStack spacing={8} align="stretch">
-          <Routes>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/projects" element={<Projects />} />
-            <Route path="/employees" element={<Employees />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/timeline-demo" element={<TimelineDemo />} />
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
-        </VStack>
-      </Box>
-    </Flex>
-  );
-
-  if (!withRouter) {
-    return <ChakraProvider>{content}</ChakraProvider>;
-  }
-
+function App() {
   return (
-    <ChakraProvider>
-      <Router>
-        {content}
-      </Router>
-    </ChakraProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <ChakraProvider>
+          <Router>
+            <div className="App">
+              <Navigation />
+              <main>
+                <Routes>
+                  {/* Public routes */}
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/" element={<Dashboard />} />
+
+                  {/* Placeholder routes - will be implemented in later phases */}
+                  <Route path="/projects" element={
+                    <Navigate to="/" replace />
+                  } />
+                  <Route path="/employees" element={
+                    <Navigate to="/" replace />
+                  } />
+                  <Route path="/timeline" element={
+                    <Navigate to="/" replace />
+                  } />
+
+                  {/* Catch all route */}
+                  <Route path="*" element={
+                    <Navigate to="/" replace />
+                  } />
+                </Routes>
+              </main>
+            </div>
+          </Router>
+        </ChakraProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
-};
+}
 
 export default App;
