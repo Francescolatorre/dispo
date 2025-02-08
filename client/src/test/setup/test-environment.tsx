@@ -1,7 +1,6 @@
 import React, { ReactElement, ReactNode, useState } from 'react';
 import { ChakraProvider } from '@chakra-ui/react';
 import { render, RenderOptions, RenderResult } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthContext, AuthContextType } from '../../contexts/AuthContext';
 
@@ -59,13 +58,11 @@ const TestWrapper = ({ children, queryClient, authState }: TestWrapperProps): Re
   };
 
   return (
-    <BrowserRouter>
-      <QueryClientProvider client={queryClient}>
-        <AuthContext.Provider value={authContextValue}>
-          <ChakraProvider>{children}</ChakraProvider>
-        </AuthContext.Provider>
-      </QueryClientProvider>
-    </BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <AuthContext.Provider value={authContextValue}>
+        <ChakraProvider>{children}</ChakraProvider>
+      </AuthContext.Provider>
+    </QueryClientProvider>
   );
 };
 
