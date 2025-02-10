@@ -1,115 +1,129 @@
-import React, { ReactElement, ReactNode, useState } from 'react';
+import React from 'react';
+import { BrowserRouter } from 'react-router-dom';
 import { ChakraProvider } from '@chakra-ui/react';
-import { render, RenderOptions, RenderResult } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AuthContext, AuthContextType } from '../../contexts/AuthContext';
-
-interface User {
-  id: string;
-  email: string;
-  role: string;
-}
-
-interface TestEnvironmentOptions extends Omit<RenderOptions, 'wrapper'> {
-  initialRoute?: string;
-  authState?: {
-    user: User | null;
-    token: string | null;
-    isAuthenticated?: boolean;
-  };
-}
+import { render, RenderOptions } from '@testing-library/react';
+import { AuthContext, User, AuthContextType } from '../../contexts/AuthContext';
 
 interface TestWrapperProps {
-  children: ReactNode;
-  queryClient: QueryClient;
-  authState?: TestEnvironmentOptions['authState'];
+  children: React.ReactNode;
+  initialAuth?: Partial<AuthContextType>;
 }
 
-export type TestEnvironment = {
-  renderWithProviders: (
-    ui: ReactElement,
-    options?: TestEnvironmentOptions
-  ) => RenderResult;
-  queryClient: QueryClient;
-};
+// Extended auth state to include token
+interface ExtendedAuthState extends Partial<AuthContextType> {
+  token?: string | null;
+}
 
-const TestWrapper = ({ children, queryClient, authState }: TestWrapperProps): ReactElement => {
-  const [user, setUser] = useState(authState?.user || null);
-  const [token, setToken] = useState(authState?.token || null);
+// Extend RenderOptions to include authState
+interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
+  authState?: ExtendedAuthState;
+}
 
-  const authContextValue: AuthContextType = {
+export const TestWrapper: React.FC<TestWrapperProps> = ({
+  children,
+  initialAuth,
+}) => {
+  const [isAuthenticated, setIsAuthenticated] = React.useState(
+    initialAuth?.isAuthenticated ?? false
+  );
+  const [user, setUser] = React.useState<User | null>(
+    initialAuth?.user ?? null
+  );
+
+  const mockAuth: AuthContextType = {
+    isAuthenticated,
     user,
-    token,
-    isAuthenticated: !!(user && token),
     auth: {
-      login: (newToken: string, newUser: User) => {
-        localStorage.setItem('token', newToken);
-        localStorage.setItem('user', JSON.stringify(newUser));
-        setToken(newToken);
-        setUser(newUser);
+      login: async (email: string, password: string) => {
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email, password }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Login failed');
+        }
+
+        const data = await response.json();
+        setUser(data.user);
+        setIsAuthenticated(true);
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
       },
-      logout: () => {
+      logout: async () => {
+        await fetch('/api/auth/logout', { method: 'POST' });
+        setUser(null);
+        setIsAuthenticated(false);
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        setToken(null);
-        setUser(null);
       },
     },
   };
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthContext.Provider value={authContextValue}>
-        <ChakraProvider>{children}</ChakraProvider>
-      </AuthContext.Provider>
-    </QueryClientProvider>
+    <ChakraProvider>
+      <BrowserRouter>
+        <AuthContext.Provider value={mockAuth}>
+          {children}
+        </AuthContext.Provider>
+      </BrowserRouter>
+    </ChakraProvider>
   );
 };
 
-export const createTestEnvironment = (): TestEnvironment => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: false,
-        gcTime: 0,
-        staleTime: 0,
-      },
-      mutations: {
-        retry: false,
-      },
-    },
-  });
-
-  const renderWithProviders = (
-    ui: ReactElement,
-    options: TestEnvironmentOptions = {}
-  ): RenderResult => {
-    const {
-      initialRoute = '/',
-      authState,
-      ...renderOptions
-    } = options;
-
-    window.history.pushState({}, 'Test page', initialRoute);
-
-    const wrapper = ({ children }: { children: ReactNode }) => (
-      <TestWrapper
-        queryClient={queryClient}
-        authState={authState}
-      >
-        {children}
-      </TestWrapper>
-    );
-
-    return render(ui, { wrapper, ...renderOptions });
-  };
-
-  return {
-    renderWithProviders,
-    queryClient,
-  };
+type TestWrapperComponent = React.FC<{ children: React.ReactNode }> & {
+  renderWithProviders: (
+    ui: React.ReactElement,
+    options?: CustomRenderOptions
+  ) => ReturnType<typeof render>;
 };
 
-// Re-export testing library utilities
-export * from '@testing-library/react';
-export * from '@testing-library/user-event';
+export const createTestWrapper = (initialAuth?: ExtendedAuthState): TestWrapperComponent => {
+  const Wrapper: TestWrapperComponent = ({ children }) => (
+    <TestWrapper initialAuth={initialAuth}>{children}</TestWrapper>
+  );
+
+  Wrapper.renderWithProviders = (
+    ui: React.ReactElement,
+    options: CustomRenderOptions = {}
+  ) => {
+    const { authState, ...renderOptions } = options;
+    const finalWrapper = ({ children }: { children: React.ReactNode }) => (
+      <TestWrapper initialAuth={authState}>{children}</TestWrapper>
+    );
+
+    return render(ui, { wrapper: finalWrapper, ...renderOptions });
+  };
+
+  return Wrapper;
+};
+
+// Alias for backward compatibility
+export const createTestEnvironment = createTestWrapper;
+
+// Helper function to create a test environment with authenticated state
+export const createAuthenticatedEnvironment = () => {
+  const mockUser: User = {
+    id: '1',
+    email: 'test@example.com',
+    role: 'user',
+  };
+
+  return createTestWrapper({
+    isAuthenticated: true,
+    user: mockUser,
+    token: 'test-token',
+  });
+};
+
+// Helper function to create a test environment with unauthenticated state
+export const createUnauthenticatedEnvironment = () => {
+  return createTestWrapper({
+    isAuthenticated: false,
+    user: null,
+    token: null,
+  });
+};

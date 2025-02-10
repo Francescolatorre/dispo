@@ -1,16 +1,27 @@
-const { Pool } = require('pg');
-const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '../../.env') });
+import pg from 'pg';
+import dotenv from 'dotenv';
 
-const pool = new Pool({
-  user: String(process.env.DB_USER),
-  host: String(process.env.DB_HOST),
-  database: String(process.env.DB_NAME),
-  password: String(process.env.DB_PASSWORD),
-  port: Number(process.env.DB_PORT) || 5432,
+// Load environment variables based on NODE_ENV
+const envFile = process.env.NODE_ENV === 'test' ? '.env.test' : '.env';
+dotenv.config({ path: envFile });
+
+// Create a new pool using environment variables
+export const pool = new pg.Pool({
+  host: process.env.DB_HOST,
+  port: parseInt(process.env.DB_PORT || '5432', 10),
+  database: process.env.DB_NAME,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
 });
 
-module.exports = {
-  query: (text, params) => pool.query(text, params),
-  pool // Export the pool object for tests
-};
+// Test the connection
+pool.on('connect', () => {
+  console.log('Connected to PostgreSQL database');
+});
+
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle client', err);
+  process.exit(-1);
+});
+
+export default pool;

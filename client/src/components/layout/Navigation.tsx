@@ -15,10 +15,12 @@ interface NavItem {
   label: string;
   path: string;
   disabled?: boolean;
+  hideWhenAuth?: boolean;
 }
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', path: '/' },
+  { label: 'Login', path: '/login', hideWhenAuth: true },
   { label: 'Projects', path: '/projects', disabled: true },
   { label: 'Employees', path: '/employees', disabled: true },
   { label: 'Timeline', path: '/timeline', disabled: true },
@@ -32,6 +34,10 @@ export const Navigation: React.FC = () => {
 
   const isActive = (path: string) => location.pathname === path;
 
+  const visibleNavItems = navItems.filter(
+    item => !item.hideWhenAuth || !isAuthenticated
+  );
+
   return (
     <Box
       as="nav"
@@ -44,7 +50,7 @@ export const Navigation: React.FC = () => {
     >
       <Flex justify="space-between" align="center" maxW="container.xl" mx="auto">
         <HStack spacing={8}>
-          {navItems.map((item) => (
+          {visibleNavItems.map((item) => (
             <Link
               key={item.path}
               as={RouterLink}

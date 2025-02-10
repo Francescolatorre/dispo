@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
@@ -7,43 +8,47 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: ['./src/test/setup/setup.ts'],
+    setupFiles: ['./tests/setup/test-setup.ts'],
     include: [
       'src/**/*.{test,spec}.{js,jsx,ts,tsx}',
-      'src/tests/**/*.{test,spec}.{js,jsx,ts,tsx}',
       'tests/**/*.{test,spec}.{js,jsx,ts,tsx}'
     ],
-    environmentOptions: {
-      jsdom: {
-        url: 'http://localhost',
-        resources: 'usable',
-        runScripts: 'dangerously',
-      },
-    },
-    deps: {
-      inline: [
-        '@chakra-ui/react',
-        '@emotion/react',
-        '@emotion/styled',
-        '@tanstack/react-query'
-      ],
-      fallbackCJS: true
-    },
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/e2e/**'
+    ],
     coverage: {
+      provider: 'v8',
       reporter: ['text', 'json', 'html'],
       exclude: [
         'node_modules/',
-        'src/test/',
+        'tests/e2e/',
         '**/*.d.ts',
-        '**/*.test.{js,jsx,ts,tsx}',
-        '**/*.spec.{js,jsx,ts,tsx}',
       ],
     },
-  },
-  resolve: {
     alias: {
       '@': resolve(__dirname, './src'),
-      '@test': resolve(__dirname, './src/test')
+      '@tests': resolve(__dirname, './tests')
     },
+    deps: {
+      inline: [/@testing-library\/jest-dom/],
+    },
+    reporters: ['verbose'],
+    watch: false,
+    testTimeout: 10000,
+    clearMocks: true,
+    restoreMocks: true,
+    environmentOptions: {
+      jsdom: {
+        resources: 'usable',
+      },
+    },
+    pool: 'vmThreads',
+    poolOptions: {
+      threads: {
+        singleThread: true
+      }
+    }
   },
 });

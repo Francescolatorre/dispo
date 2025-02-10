@@ -2,71 +2,48 @@ export interface Assignment {
   id: number;
   project_id: number;
   employee_id: number;
+  requirement_id: number;
   role: string;
   start_date: string;
   end_date: string;
+  status: 'active' | 'completed' | 'terminated';
   allocation_percentage: number;
-  status: 'active' | 'completed' | 'cancelled';
-  dr_status: string;
-  position_status: string;
+  dr_status?: string;
+  position_status?: string;
+  termination_reason?: string;
 }
 
-export interface AssignmentWithRelations extends Assignment {
-  project_name: string;
-  employee_name: string;
-}
-
-export interface CreateAssignmentDto {
+export interface NewAssignment extends Omit<Assignment, 'id' | 'status'> {
   project_id: number;
   employee_id: number;
-  role: string;
-  start_date: string;
-  end_date: string;
-  allocation_percentage: number;
-  status?: 'active' | 'completed' | 'cancelled';
-  dr_status?: string;
-  position_status?: string;
+  requirement_id: number;
 }
 
-export interface UpdateAssignmentDto {
-  role?: string;
-  start_date?: string;
-  end_date?: string;
-  allocation_percentage?: number;
-  status?: 'active' | 'completed' | 'cancelled';
-  dr_status?: string;
-  position_status?: string;
+export interface AssignmentUpdate extends Partial<Omit<Assignment, 'id' | 'project_id' | 'employee_id' | 'requirement_id'>> {
+  id: number;
 }
 
-export interface AssignmentValidationDto {
-  // Frontend fields (camelCase)
-  projectId?: number;
-  employeeId?: number;
-  role?: string;
-  startDate?: string;
-  endDate?: string;
-  allocationPercentage?: number;
-  status?: 'active' | 'completed' | 'cancelled';
-  drStatus?: string;
-  positionStatus?: string;
+export interface AssignmentTermination {
+  id: number;
+  termination_reason: string;
+  termination_date?: string;
 }
 
-export interface AssignmentValidation {
-  isValid: boolean;
-  errors: {
-    [key: string]: string[];
-  };
-  warning?: boolean;
-  message?: string;
-}
-
-export interface AssignmentFilters {
-  projectId?: number;
-  employeeId?: number;
-  status?: 'active' | 'completed' | 'cancelled';
-  startDate?: string;
-  endDate?: string;
-  role?: string;
-  drStatus?: string;
-  positionStatus?: string;
+export interface EmployeeAvailability {
+  employee_id: number;
+  available_percentage: number;
+  current_assignments: {
+    project_id: number;
+    project_name: string;
+    allocation_percentage: number;
+    start_date: string;
+    end_date: string;
+  }[];
+  conflicts: {
+    project_id: number;
+    project_name: string;
+    conflict_start_date: string;
+    conflict_end_date: string;
+    overlap_percentage: number;
+  }[];
 }

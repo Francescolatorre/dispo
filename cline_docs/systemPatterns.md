@@ -202,3 +202,16 @@ src/
    - Pagination
    - Format Conversion
    - Error Handling
+
+## Version Control Patterns
+
+1. **Immediate File Tracking**
+   - All new files are immediately staged for version control
+   - Git add command executed right after file creation
+   - Applies to all file types without exception
+   - Ensures consistent version control from file inception
+   - Prevents untracked files from accumulating
+   - Line ending configuration:
+     * Windows environments use CRLF
+     * Git configured to handle line ending conversions
+   - Special handling for system-generated files (e.g., 'nul' files should be gitignored)

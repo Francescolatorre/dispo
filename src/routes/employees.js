@@ -1,12 +1,13 @@
-const express = require('express');
+import express from 'express';
+import { pool } from '../config/database.js';
+import validateEmployee from '../middleware/validateEmployee.js';
+
 const router = express.Router();
-const db = require('../config/database');
-const validateEmployee = require('../middleware/validateEmployee');
 
 // Get all employees
 router.get('/', async (req, res) => {
   try {
-    const result = await db.query(
+    const result = await pool.query(
       'SELECT * FROM employees ORDER BY created_at DESC'
     );
     res.json(result.rows);
@@ -20,7 +21,7 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await db.query(
+    const result = await pool.query(
       'SELECT * FROM employees WHERE id = $1',
       [id]
     );
@@ -54,7 +55,7 @@ router.post('/', validateEmployee, async (req, res) => {
       part_time_factor
     } = req.body;
 
-    const result = await db.query(
+    const result = await pool.query(
       `INSERT INTO employees (
         name,
         employee_number,
@@ -100,13 +101,18 @@ router.put('/:id', validateEmployee, async (req, res) => {
     const { id } = req.params;
     const {
       name,
+      email,
+      phone,
+      position,
       seniority_level,
       qualifications,
       work_time_factor,
-      contract_end_date
+      contract_end_date,
+      status,
+      part_time_factor
     } = req.body;
 
-    const result = await db.query(
+    const result = await pool.query(
       `UPDATE employees
        SET name = $1,
            seniority_level = $2,
@@ -142,7 +148,7 @@ router.delete('/:id', async (req, res) => {
     const { id } = req.params;
     
     // Check if employee exists
-    const checkResult = await db.query(
+    const checkResult = await pool.query(
       'SELECT id FROM employees WHERE id = $1',
       [id]
     );
@@ -152,7 +158,7 @@ router.delete('/:id', async (req, res) => {
     }
 
     // Check if employee has project assignments
-    const assignmentResult = await db.query(
+    const assignmentResult = await pool.query(
       'SELECT id FROM project_assignments WHERE employee_id = $1 LIMIT 1',
       [id]
     );
@@ -164,7 +170,7 @@ router.delete('/:id', async (req, res) => {
     }
 
     // Delete employee
-    await db.query('DELETE FROM employees WHERE id = $1', [id]);
+    await pool.query('DELETE FROM employees WHERE id = $1', [id]);
     
     res.status(204).send();
   } catch (err) {
@@ -173,4 +179,4 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

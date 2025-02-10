@@ -15,25 +15,25 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "allowJs": true,
-    "esModuleInterop": true,
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
-      "@test/*": ["src/test/*"]
-    }
+      "@tests/*": ["tests/*"]
+    },
+    "types": [
+      "vitest/globals",
+      "@testing-library/jest-dom",
+      "node"
+    ]
   },
   "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "src/**/*.js",
-    "src/**/*.jsx",
-    "src/**/*.test.ts",
-    "src/**/*.test.tsx",
-    "src/**/*.spec.ts",
-    "src/**/*.spec.tsx",
-    "tests/**/*.ts",
-    "tests/**/*.tsx"
+    "src",
+    "tests",
+    "vitest.config.ts",
+    "playwright.config.ts",
+    "tests/setup/**/*.ts",
+    "tests/setup/**/*.tsx",
+    "tests/setup/**/*.d.ts"
   ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
