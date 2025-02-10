@@ -1,33 +1,34 @@
 # Active Context
 
 ## Current Task
-PostgreSQL MCP server connection verified successfully.
+Correcting the architecture approach for database access:
+1. Backend services use direct pg pool connection
+2. MCP PostgreSQL server reserved for testing and development assistance
 
 ## Recent Changes
-- Built the PostgreSQL MCP server TypeScript code
-- Verified environment variables in .env file
-- Confirmed MCP settings configuration in cline_mcp_settings.json
-- Successfully tested MCP server connection and functionality:
-  - get_table_info tool verified employees table schema
-  - query tool tested with simple COUNT query
-  - Database connection is working as expected
+- Reverted employeeService.js to use direct pg pool connection
+- Removed MCP tool usage from production code
+- Verified all backend services are using direct database connections:
+  * employeeService.js - Using pg pool ✓
+  * requirementService.js - Using pg pool ✓
+  * assignmentService.js - Using pg pool ✓
+  * workloadService.js - Using pg pool ✓
 
 ## Next Steps
-1. Begin implementing database operations using MCP tools:
-   - Write queries for data manipulation
-   - Implement data validation
-   - Set up error handling
-2. Document PostgreSQL tools usage patterns
-3. Integrate MCP database operations with existing services
+1. Document MCP PostgreSQL server usage patterns for:
+   - Test data preparation
+   - Test execution verification
+   - Development assistance tasks
+2. Update test files to use MCP tools for data verification
+3. Create examples of MCP tool usage in tests
 
 ## Technical Details
-PostgreSQL MCP server provides three main tools:
+Database Connection:
+- Production: Uses node-postgres (pg) pool from config/database.js
+- Testing: Uses MCP tools for data manipulation/verification
+- Development: MCP tools available for queries and verification
+
+MCP PostgreSQL server provides tools for testing/development:
 - query: For executing SELECT queries
 - get_table_info: For getting table schema information
 - execute: For executing INSERT, UPDATE, DELETE statements
-
-Connection details:
-- Host: localhost
-- Port: 5432
-- Database: dispomvp
-- User: dispo
