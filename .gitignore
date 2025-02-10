@@ -8,3 +8,4 @@ dist/
 build/
 *.log
 .env
+client/nul
