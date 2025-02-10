@@ -1,0 +1,95 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: dispo_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install backend dependencies
+        run: npm ci
+
+      - name: Install frontend dependencies
+        working-directory: ./client
+        run: npm ci
+
+      - name: Set up test database
+        run: npm run setup:db
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: dispo_test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dispo_test
+
+      - name: Run backend tests
+        run: npm test
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: dispo_test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dispo_test
+          NODE_ENV: test
+
+      - name: Run frontend unit tests
+        working-directory: ./client
+        run: npm run test:unit
+        env:
+          NODE_ENV: test
+
+      - name: Install Playwright browsers
+        working-directory: ./client
+        run: npx playwright install --with-deps
+
+      - name: Run frontend E2E tests
+        working-directory: ./client
+        run: npm run test:e2e
+        env:
+          NODE_ENV: test
+
+      - name: Generate frontend coverage report
+        working-directory: ./client
+        run: npm run test:coverage
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: |
+            coverage/
+            client/coverage/
+            client/test-results/
+            client/playwright-report/
+          retention-days: 30
