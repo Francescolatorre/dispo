@@ -12,6 +12,7 @@ export interface AuthContextType {
   auth: {
     login: (email: string, password: string) => Promise<void>;
     logout: () => Promise<void>;
+    validateToken: (token: string) => Promise<boolean>;
   };
 }
 
@@ -34,16 +35,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const token = localStorage.getItem('token');
     const savedUser = localStorage.getItem('user');
     if (token && savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-        setIsAuthenticated(true);
-      } catch (error) {
-        console.error('Failed to parse saved user:', error);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-      }
+      validateToken(token).then(isValid => {
+        if (isValid) {
+          try {
+            setUser(JSON.parse(savedUser));
+            setIsAuthenticated(true);
+          } catch (error) {
+            console.error('Failed to parse saved user:', error);
+            handleLogout();
+          }
+        } else {
+          handleLogout();
+        }
+      }).catch(() => {
+        handleLogout();
+      });
     }
   }, []);
+
+  const validateToken = async (token: string): Promise<boolean> => {
+    try {
+      const response = await fetch('/api/auth/validate', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      return response.ok;
+    } catch (error) {
+      console.error('Token validation error:', error);
+      return false;
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+    setIsAuthenticated(false);
+  };
 
   const login = async (email: string, password: string) => {
     try {
@@ -56,14 +87,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (!response.ok) {
-        throw new Error('Login failed');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Login failed');
       }
 
       const data = await response.json();
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      setUser(data.user);
-      setIsAuthenticated(true);
+      if (await validateToken(data.token)) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        setUser(data.user);
+        setIsAuthenticated(true);
+      } else {
+        throw new Error('Invalid token received');
+      }
     } catch (error) {
       console.error('Login error:', error);
       throw error;
@@ -74,14 +110,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await fetch('/api/auth/logout', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
       });
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      setUser(null);
-      setIsAuthenticated(false);
+      handleLogout();
     }
   };
 
@@ -91,6 +127,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     auth: {
       login,
       logout,
+      validateToken,
     },
   };
 

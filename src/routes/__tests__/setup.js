@@ -1,13 +1,25 @@
-import { beforeEach, afterAll } from '@jest/globals';
-import { pool } from '../../config/database.js';
+import pool from '../../config/database.js';
 
-// Clean up database before each test
-beforeEach(async () => {
-  await pool.query('DELETE FROM users');
-});
+export async function setupTestDb() {
+  try {
+    // Create users table if it doesn't exist
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        role VARCHAR(50) NOT NULL DEFAULT 'user',
+        last_login TIMESTAMP WITH TIME ZONE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+  } catch (error) {
+    console.error('Error setting up test database:', error);
+    throw error;
+  }
+}
 
-// Clean up database and close connection after all tests
-afterAll(async () => {
-  await pool.query('DELETE FROM users');
-  await pool.end();
-});
+// Run setup before tests
+setupTestDb();

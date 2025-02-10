@@ -1,12 +1,17 @@
 import pg from 'pg';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Load environment variables based on NODE_ENV
 const envFile = process.env.NODE_ENV === 'test' ? '.env.test' : '.env';
-dotenv.config({ path: envFile });
+dotenv.config({ path: join(__dirname, '../../', envFile) });
 
 // Create a new pool using environment variables
-export const pool = new pg.Pool({
+const pool = new pg.Pool({
   host: process.env.DB_HOST,
   port: parseInt(process.env.DB_PORT || '5432', 10),
   database: process.env.DB_NAME,

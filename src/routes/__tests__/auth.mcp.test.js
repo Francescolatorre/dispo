@@ -1,9 +1,9 @@
-import request from 'supertest';
-import { beforeEach, afterAll, describe, it, expect } from '@jest/globals';
-import jwt from 'jsonwebtoken';
-import bcrypt from 'bcrypt';
-import app from '../../server.js';
-import { use_mcp_tool } from '../../utils/mcp.js';
+const request = require('supertest');
+const { beforeEach, afterAll, describe, it, expect } = require('@jest/globals');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
+const app = require('../../server.js');
+const { use_mcp_tool } = require('../../utils/mcp.js');
 
 describe('Auth Routes (MCP Example)', () => {
   let testUser;

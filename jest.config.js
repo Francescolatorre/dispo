@@ -5,7 +5,7 @@ export default {
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   testMatch: ['**/__tests__/**/*.js'],
-  setupFiles: [
+  setupFilesAfterEnv: [
     'dotenv/config',
     '<rootDir>/src/routes/__tests__/setup.js'
   ],

@@ -1,0 +1,59 @@
+name: Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: dispomvp_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Use Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Setup test database
+      run: npm run setup:db
+      env:
+        DB_USER: postgres
+        DB_PASSWORD: postgres
+        DB_NAME: dispomvp_test
+        DB_HOST: localhost
+        DB_PORT: 5432
+        NODE_ENV: test
+
+    - name: Run auth tests
+      run: npx vitest src/routes/__tests__/auth.test.js --no-watch --reporter verbose
+      env:
+        DB_USER: postgres
+        DB_PASSWORD: postgres
+        DB_NAME: dispomvp_test
+        DB_HOST: localhost
+        DB_PORT: 5432
+        NODE_ENV: test
+        JWT_SECRET: test-secret

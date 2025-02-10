@@ -5,10 +5,16 @@ import { resolve } from 'path';
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, './src'),
+      '@tests': resolve(__dirname, './tests')
+    }
+  },
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: ['./tests/setup/test-setup.ts'],
+    setupFiles: ['src/test/setup/test-setup.ts'],
     include: [
       'src/**/*.{test,spec}.{js,jsx,ts,tsx}',
       'tests/**/*.{test,spec}.{js,jsx,ts,tsx}'
@@ -27,12 +33,14 @@ export default defineConfig({
         '**/*.d.ts',
       ],
     },
-    alias: {
-      '@': resolve(__dirname, './src'),
-      '@tests': resolve(__dirname, './tests')
-    },
     deps: {
-      inline: [/@testing-library\/jest-dom/],
+      interopDefault: true,
+      inline: [
+        '@testing-library/jest-dom',
+        'react-router',
+        'react-router-dom',
+        '@chakra-ui/react'
+      ]
     },
     reporters: ['verbose'],
     watch: false,
@@ -44,11 +52,6 @@ export default defineConfig({
         resources: 'usable',
       },
     },
-    pool: 'vmThreads',
-    poolOptions: {
-      threads: {
-        singleThread: true
-      }
-    }
+    pool: 'forks'
   },
 });

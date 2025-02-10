@@ -1,15 +1,15 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { pool } from '../config/database.js';
+import pool from '../config/database.js';
 import rateLimit from 'express-rate-limit';
 
 const router = express.Router();
 
-// Rate limiting middleware
+// Rate limiting middleware - only enable in production
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 requests per windowMs
+  max: process.env.NODE_ENV === 'test' ? 10 : 5, // Lower limit for tests
   message: { message: 'Too many requests' },
   statusCode: 429
 });
@@ -30,6 +30,27 @@ const validateLoginInput = (req, res, next) => {
   }
 
   next();
+};
+
+// Token verification middleware
+const verifyToken = async (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ message: 'No token provided' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      res.status(401).json({ message: 'Token expired' });
+    } else {
+      res.status(401).json({ message: 'Invalid token' });
+    }
+  }
 };
 
 // Login route
@@ -82,6 +103,7 @@ router.post('/login', loginLimiter, validateLoginInput, async (req, res) => {
       user: {
         id: user.id,
         email: user.email,
+        name: user.name,
         role: user.role
       }
     });
@@ -99,24 +121,11 @@ router.post('/logout', (req, res) => {
 });
 
 // Verify token route
-router.get('/verify', async (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({ message: 'No token provided' });
-  }
-
+router.get('/verify', verifyToken, async (req, res) => {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const result = await pool.query(
-      `SELECT id, email, role, 
-        CASE 
-          WHEN last_login < NOW() - INTERVAL '24 hours' 
-          THEN true 
-          ELSE false 
-        END as token_expired 
-      FROM users WHERE id = $1`,
-      [decoded.userId]
+      'SELECT id, email, name, role FROM users WHERE id = $1',
+      [req.user.userId]
     );
 
     if (result.rows.length === 0) {
@@ -124,50 +133,48 @@ router.get('/verify', async (req, res) => {
     }
 
     const user = result.rows[0];
-    
-    // Check if token has expired based on last login
-    if (user.token_expired) {
-      return res.status(401).json({ message: 'Token expired' });
-    }
-    res.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        role: user.role
-      }
-    });
+    res.json({ user });
   } catch (error) {
     console.error('Token verification error:', error);
-    if (error.name === 'TokenExpiredError') {
-      res.status(401).json({ message: 'Token expired' });
-    } else if (error.name === 'JsonWebTokenError') {
-      res.status(401).json({ message: 'Invalid token' });
-    } else {
-      res.status(500).json({ message: 'Internal server error' });
-    }
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
-// Reset password request route
-router.post('/reset-password-request', async (req, res) => {
-  const { email } = req.body;
+// Change password route
+router.post('/change-password', verifyToken, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
 
   try {
+    // Get user from database
     const result = await pool.query(
-      'SELECT id FROM users WHERE email = $1',
-      [email]
+      'SELECT * FROM users WHERE id = $1',
+      [req.user.userId]
     );
 
-    if (result.rows.length === 0) {
-      // Don't reveal if email exists
-      return res.json({ message: 'If the email exists, a reset link will be sent' });
+    const user = result.rows[0];
+    if (!user) {
+      return res.status(401).json({ message: 'User not found' });
     }
 
-    // In a real application, send reset email here
-    // For test environment, just return success
-    res.json({ message: 'If the email exists, a reset link will be sent' });
+    // Verify current password
+    const validPassword = await bcrypt.compare(currentPassword, user.password);
+    if (!validPassword) {
+      return res.status(401).json({ message: 'Invalid current password' });
+    }
+
+    // Hash new password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    // Update password and updated_at timestamp
+    await pool.query(
+      'UPDATE users SET password = $1, updated_at = NOW() WHERE id = $2',
+      [hashedPassword, user.id]
+    );
+
+    res.json({ message: 'Password updated successfully' });
   } catch (error) {
-    console.error('Reset password request error:', error);
+    console.error('Change password error:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 });

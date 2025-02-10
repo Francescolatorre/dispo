@@ -17,11 +17,11 @@
 - Node.js
 - Express
 - PostgreSQL
-- Jest for testing
+- Vitest for testing (migrated from Jest for consistency)
 
 ## Testing Setup
 - Frontend: Vitest + React Testing Library
-- Backend: Jest
+- Backend: Vitest
 - E2E: Playwright
 
 ## Development Workflow

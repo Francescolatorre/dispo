@@ -1,7 +1,8 @@
-const express = require('express');
+import express from 'express';
+import requirementService from '../services/requirementService.js';
+import validateRequirement from '../middleware/validateRequirement.js';
+
 const router = express.Router();
-const requirementService = require('../services/requirementService');
-const validateRequirement = require('../middleware/validateRequirement');
 
 /**
  * Get all requirements for a project
@@ -144,4 +145,4 @@ router.get('/:id/matching-employees', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

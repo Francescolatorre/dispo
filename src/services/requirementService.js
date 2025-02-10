@@ -1,4 +1,4 @@
-const { pool } = require('../config/database');
+import pool from '../config/database.js';
 
 class RequirementService {
   /**
@@ -229,4 +229,5 @@ class RequirementService {
   }
 }
 
-module.exports = new RequirementService();
+const requirementService = new RequirementService();
+export default requirementService;

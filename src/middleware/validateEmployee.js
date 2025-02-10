@@ -28,4 +28,4 @@ const validateEmployee = (req, res, next) => {
   next();
 };
 
-export { validateEmployee };
+export default validateEmployee;

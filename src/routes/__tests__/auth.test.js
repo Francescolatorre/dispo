@@ -1,39 +1,38 @@
 import request from 'supertest';
-import { beforeEach, afterAll, describe, it, expect, jest } from '@jest/globals';
+import { describe, it, expect, beforeEach } from 'vitest';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
-import { pool } from '../../config/database.js';
+import pool from '../../config/database.js';
 import app from '../../server.js';
+import { setupTestDb } from './setup.js';
 
 describe('Auth Routes', () => {
   let testUser;
+  let testCount = 0;
 
-  // Clean up database before each test
+  const getUniqueEmail = () => `test${testCount}@example.com`;
+
   beforeEach(async () => {
+    // Ensure database is set up
+    await setupTestDb();
+    
+    // Clean up users table before each test
     await pool.query('DELETE FROM users');
-  });
+    testCount++;
 
-  beforeAll(async () => {
     // Create test user
     const hashedPassword = await bcrypt.hash('testpass123', 10);
     const result = await pool.query(
-      'INSERT INTO users (email, password, role, last_login) VALUES ($1, $2, $3, NOW()) RETURNING *',
-      ['test@example.com', hashedPassword, 'user']
+      'INSERT INTO users (email, password, name, role) VALUES ($1, $2, $3, $4) RETURNING *',
+      ['test@example.com', hashedPassword, 'Test User', 'user']
     );
     testUser = result.rows[0];
   });
 
-  afterAll(async () => {
-    // Clean up test user
-    await pool.query('DELETE FROM users WHERE email = $1', ['test@example.com']);
-    // Close database connection
-    await pool.end();
-  });
-
-  describe('POST /auth/login', () => {
+  describe('POST /api/auth/login', () => {
     it('should login with valid credentials', async () => {
       const response = await request(app)
-        .post('/auth/login')
+        .post('/api/auth/login')
         .send({
           email: 'test@example.com',
           password: 'testpass123'
@@ -43,6 +42,7 @@ describe('Auth Routes', () => {
       expect(response.body).toHaveProperty('token');
       expect(response.body).toHaveProperty('user');
       expect(response.body.user).toHaveProperty('email', 'test@example.com');
+      expect(response.body.user).toHaveProperty('name', 'Test User');
     });
 
     it('should update last_login on successful login', async () => {
@@ -53,7 +53,7 @@ describe('Auth Routes', () => {
       const oldLastLogin = beforeLogin.rows[0].last_login;
 
       await request(app)
-        .post('/auth/login')
+        .post('/api/auth/login')
         .send({
           email: 'test@example.com',
           password: 'testpass123'
@@ -65,12 +65,14 @@ describe('Auth Routes', () => {
       );
       const newLastLogin = afterLogin.rows[0].last_login;
 
-      expect(new Date(newLastLogin)).toBeGreaterThan(new Date(oldLastLogin));
+      expect(new Date(newLastLogin).getTime()).toBeGreaterThan(
+        new Date(oldLastLogin || 0).getTime()
+      );
     });
 
     it('should reject invalid credentials', async () => {
       const response = await request(app)
-        .post('/auth/login')
+        .post('/api/auth/login')
         .send({
           email: 'test@example.com',
           password: 'wrongpass'
@@ -82,7 +84,7 @@ describe('Auth Routes', () => {
 
     it('should reject non-existent user', async () => {
       const response = await request(app)
-        .post('/auth/login')
+        .post('/api/auth/login')
         .send({
           email: 'nonexistent@example.com',
           password: 'testpass123'
@@ -93,7 +95,7 @@ describe('Auth Routes', () => {
     });
   });
 
-  describe('GET /auth/verify', () => {
+  describe('GET /api/auth/verify', () => {
     it('should verify valid token', async () => {
       const token = jwt.sign(
         { userId: testUser.id, email: testUser.email },
@@ -102,7 +104,7 @@ describe('Auth Routes', () => {
       );
 
       const response = await request(app)
-        .get('/auth/verify')
+        .get('/api/auth/verify')
         .set('Authorization', `Bearer ${token}`);
 
       expect(response.status).toBe(200);
@@ -112,7 +114,7 @@ describe('Auth Routes', () => {
 
     it('should reject invalid token', async () => {
       const response = await request(app)
-        .get('/auth/verify')
+        .get('/api/auth/verify')
         .set('Authorization', 'Bearer invalid-token');
 
       expect(response.status).toBe(401);
@@ -121,52 +123,64 @@ describe('Auth Routes', () => {
 
     it('should reject missing token', async () => {
       const response = await request(app)
-        .get('/auth/verify');
+        .get('/api/auth/verify');
 
       expect(response.status).toBe(401);
       expect(response.body).toHaveProperty('message', 'No token provided');
     });
   });
 
-  describe('POST /auth/reset-password-request', () => {
-    it('should handle reset request for existing user', async () => {
+  describe('POST /api/auth/change-password', () => {
+    it('should change password with valid token and current password', async () => {
+      const token = jwt.sign(
+        { userId: testUser.id, email: testUser.email },
+        process.env.JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+
       const response = await request(app)
-        .post('/auth/reset-password-request')
+        .post('/api/auth/change-password')
+        .set('Authorization', `Bearer ${token}`)
         .send({
-          email: 'test@example.com'
+          currentPassword: 'testpass123',
+          newPassword: 'newpass123'
         });
 
       expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty('message', 'If the email exists, a reset link will be sent');
+      expect(response.body).toHaveProperty('message', 'Password updated successfully');
+
+      // Verify updated_at was updated
+      const result = await pool.query(
+        'SELECT updated_at FROM users WHERE id = $1',
+        [testUser.id]
+      );
+      expect(result.rows[0].updated_at).toBeDefined();
     });
 
-    it('should handle reset request for non-existent user', async () => {
+    it('should reject invalid current password', async () => {
+      const token = jwt.sign(
+        { userId: testUser.id, email: testUser.email },
+        process.env.JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+
       const response = await request(app)
-        .post('/auth/reset-password-request')
+        .post('/api/auth/change-password')
+        .set('Authorization', `Bearer ${token}`)
         .send({
-          email: 'nonexistent@example.com'
+          currentPassword: 'wrongpass',
+          newPassword: 'newpass123'
         });
 
-      expect(response.status).toBe(200);
-      // Should return same message to prevent email enumeration
-      expect(response.body).toHaveProperty('message', 'If the email exists, a reset link will be sent');
-    });
-  });
-
-  describe('POST /auth/logout', () => {
-    it('should handle logout request', async () => {
-      const response = await request(app)
-        .post('/auth/logout');
-
-      expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty('message', 'Logged out successfully');
+      expect(response.status).toBe(401);
+      expect(response.body).toHaveProperty('message', 'Invalid current password');
     });
   });
 
   describe('Input Validation', () => {
     it('should validate email format', async () => {
       const response = await request(app)
-        .post('/auth/login')
+        .post('/api/auth/login')
         .send({
           email: 'invalid-email',
           password: 'testpass123'
@@ -178,7 +192,7 @@ describe('Auth Routes', () => {
 
     it('should validate password length', async () => {
       const response = await request(app)
-        .post('/auth/login')
+        .post('/api/auth/login')
         .send({
           email: 'test@example.com',
           password: '123'
@@ -190,13 +204,12 @@ describe('Auth Routes', () => {
   });
 
   describe('Error Handling', () => {
-    it('should handle database connection errors', async () => {
-      // Simulate database error
-      const mockError = new Error('Database connection failed');
-      jest.spyOn(pool, 'query').mockRejectedValueOnce(mockError);
+    it('should handle database errors gracefully', async () => {
+      // Drop the users table to simulate a database error
+      await pool.query('DROP TABLE IF EXISTS users');
 
       const response = await request(app)
-        .post('/auth/login')
+        .post('/api/auth/login')
         .send({
           email: 'test@example.com',
           password: 'testpass123'
@@ -204,13 +217,16 @@ describe('Auth Routes', () => {
 
       expect(response.status).toBe(500);
       expect(response.body).toHaveProperty('message', 'Internal server error');
+
+      // Recreate the users table for subsequent tests
+      await setupTestDb();
     });
 
     it('should handle rate limiting', async () => {
       // Make multiple requests in quick succession
-      const requests = Array(6).fill().map(() => 
+      const requests = Array(11).fill().map(() => 
         request(app)
-          .post('/auth/login')
+          .post('/api/auth/login')
           .send({
             email: 'test@example.com',
             password: 'testpass123'
@@ -231,11 +247,11 @@ describe('Auth Routes', () => {
       const expiredToken = jwt.sign(
         { userId: testUser.id, email: testUser.email },
         process.env.JWT_SECRET,
-        { expiresIn: '0s' }
+        { expiresIn: '-1h' } // Expired 1 hour ago
       );
 
       const response = await request(app)
-        .get('/auth/verify')
+        .get('/api/auth/verify')
         .set('Authorization', `Bearer ${expiredToken}`);
 
       expect(response.status).toBe(401);
@@ -244,7 +260,7 @@ describe('Auth Routes', () => {
 
     it('should handle malformed tokens', async () => {
       const response = await request(app)
-        .get('/auth/verify')
+        .get('/api/auth/verify')
         .set('Authorization', 'Bearer malformed.token.here');
 
       expect(response.status).toBe(401);

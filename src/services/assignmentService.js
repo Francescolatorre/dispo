@@ -1,5 +1,5 @@
-const { pool } = require('../config/database');
-const workloadService = require('./workloadService');
+import pool from '../config/database.js';
+import workloadService from './workloadService.js';
 
 class AssignmentService {
   /**
@@ -260,4 +260,5 @@ class AssignmentService {
   }
 }
 
-module.exports = new AssignmentService();
+const assignmentService = new AssignmentService();
+export default assignmentService;

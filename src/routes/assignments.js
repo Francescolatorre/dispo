@@ -1,7 +1,8 @@
-const express = require('express');
+import express from 'express';
+import assignmentService from '../services/assignmentService.js';
+import validateAssignment from '../middleware/validateAssignment.js';
+
 const router = express.Router();
-const assignmentService = require('../services/assignmentService');
-const validateAssignment = require('../middleware/validateAssignment');
 
 /**
  * Get assignments for a project
@@ -164,4 +165,4 @@ router.get('/check-availability/:employeeId', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;
