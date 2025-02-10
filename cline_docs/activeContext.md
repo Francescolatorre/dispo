@@ -1,26 +1,32 @@
 # Active Context
 
 ## Current Task
-Correcting the architecture approach for database access:
+Implementing MCP PostgreSQL server usage patterns for testing:
 1. Backend services use direct pg pool connection
 2. MCP PostgreSQL server reserved for testing and development assistance
 
 ## Recent Changes
 - Reverted employeeService.js to use direct pg pool connection
-- Removed MCP tool usage from production code
 - Verified all backend services are using direct database connections:
   * employeeService.js - Using pg pool ✓
   * requirementService.js - Using pg pool ✓
   * assignmentService.js - Using pg pool ✓
   * workloadService.js - Using pg pool ✓
+- Created auth.mcp.test.js as example of MCP tool usage in tests:
+  * Test data setup using execute tool
+  * Test verification using query tool
+  * Schema validation using get_table_info tool
 
 ## Next Steps
-1. Document MCP PostgreSQL server usage patterns for:
-   - Test data preparation
-   - Test execution verification
-   - Development assistance tasks
-2. Update test files to use MCP tools for data verification
-3. Create examples of MCP tool usage in tests
+1. Create additional test examples for:
+   - Employee service tests
+   - Project service tests
+   - Assignment service tests
+2. Document MCP test patterns:
+   - Data setup best practices
+   - Verification strategies
+   - Schema validation approaches
+3. Update test documentation with MCP usage guidelines
 
 ## Technical Details
 Database Connection:
@@ -32,3 +38,26 @@ MCP PostgreSQL server provides tools for testing/development:
 - query: For executing SELECT queries
 - get_table_info: For getting table schema information
 - execute: For executing INSERT, UPDATE, DELETE statements
+
+Example MCP Test Patterns:
+1. Data Setup:
+   ```js
+   await use_mcp_tool('postgres', 'execute', {
+     query: 'INSERT INTO users ...',
+     params: [...]
+   });
+   ```
+
+2. Data Verification:
+   ```js
+   const result = await use_mcp_tool('postgres', 'query', {
+     query: 'SELECT * FROM users ...',
+     params: [...]
+   });
+   ```
+
+3. Schema Validation:
+   ```js
+   const tableInfo = await use_mcp_tool('postgres', 'get_table_info', {
+     table: 'users'
+   });
