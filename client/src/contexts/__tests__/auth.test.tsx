@@ -2,23 +2,15 @@ import React from 'react';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createTestEnvironment } from '../../test/setup/test-environment';
+import { render } from '../../test/utils/setup-test-providers';
 import { useAuth } from '../AuthContext';
 
-const testEnv = createTestEnvironment();
-
-interface User {
-  id: string;
-  email: string;
-  role: string;
-}
-
 const TestHookComponent = () => {
-  const { isAuthenticated, user, token, auth } = useAuth();
+  const { isAuthenticated, user, auth } = useAuth();
   return (
     <div data-testid="auth-test">
       <div data-testid="auth-state">
-        {JSON.stringify({ isAuthenticated, user, token })}
+        {JSON.stringify({ isAuthenticated, user })}
       </div>
       <button onClick={() => auth.logout()} data-testid="logout-button">
         Logout
@@ -33,18 +25,12 @@ describe('Authentication', () => {
   });
 
   it('should start with unauthenticated state', async () => {
-    testEnv.renderWithProviders(<TestHookComponent />, {
-      authState: {
-        user: null,
-        token: null,
-      },
-    });
+    render(<TestHookComponent />);
 
     const element = screen.getByTestId('auth-state');
     expect(JSON.parse(element.textContent || '')).toEqual({
       isAuthenticated: false,
       user: null,
-      token: null,
     });
   });
 
@@ -54,20 +40,17 @@ describe('Authentication', () => {
       email: 'test@example.com',
       role: 'user',
     };
-    const mockToken = 'test-token';
 
-    testEnv.renderWithProviders(<TestHookComponent />, {
-      authState: {
-        user: mockUser,
-        token: mockToken,
-      },
-    });
+    // Set up initial auth state
+    localStorage.setItem('token', 'test-token');
+    localStorage.setItem('user', JSON.stringify(mockUser));
+
+    render(<TestHookComponent />);
 
     const element = screen.getByTestId('auth-state');
     expect(JSON.parse(element.textContent || '')).toEqual({
       isAuthenticated: true,
       user: mockUser,
-      token: mockToken,
     });
   });
 
@@ -77,21 +60,18 @@ describe('Authentication', () => {
       email: 'test@example.com',
       role: 'user',
     };
-    const mockToken = 'test-token';
 
-    testEnv.renderWithProviders(<TestHookComponent />, {
-      authState: {
-        user: mockUser,
-        token: mockToken,
-      },
-    });
+    // Set up initial auth state
+    localStorage.setItem('token', 'test-token');
+    localStorage.setItem('user', JSON.stringify(mockUser));
+
+    render(<TestHookComponent />);
 
     // Verify initial state
     let element = screen.getByTestId('auth-state');
     expect(JSON.parse(element.textContent || '')).toEqual({
       isAuthenticated: true,
       user: mockUser,
-      token: mockToken,
     });
 
     // Trigger logout
@@ -106,8 +86,32 @@ describe('Authentication', () => {
       expect(JSON.parse(element.textContent || '')).toEqual({
         isAuthenticated: false,
         user: null,
-        token: null,
       });
+    });
+
+    // Verify localStorage is cleared
+    expect(localStorage.getItem('token')).toBeNull();
+    expect(localStorage.getItem('user')).toBeNull();
+  });
+
+  it('should handle login errors', async () => {
+    render(<TestHookComponent />);
+    const { auth } = useAuth();
+
+    let loginSucceeded = false;
+    try {
+      await auth.login('wrong@example.com', 'wrongpass');
+      loginSucceeded = true;
+    } catch (error) {
+      expect(error).toBeDefined();
+    }
+    expect(loginSucceeded).toBeFalsy();
+
+    // Verify state remains unauthenticated
+    const element = screen.getByTestId('auth-state');
+    expect(JSON.parse(element.textContent || '')).toEqual({
+      isAuthenticated: false,
+      user: null,
     });
   });
 });
