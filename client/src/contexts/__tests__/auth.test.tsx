@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { screen, waitFor, act } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createTestEnvironment } from '../../test/utils/test-environment';
 import { useAuth } from '../AuthContext';
@@ -10,28 +10,54 @@ const testEnv = createTestEnvironment();
 interface User {
   id: string;
   email: string;
-  name: string;
   role: string;
 }
 
 const TestHookComponent = () => {
   const { isAuthenticated, user, auth } = useAuth();
+  const [error, setError] = React.useState<string | null>(null);
+
+  const handleLogin = async () => {
+    try {
+      setError(null);
+      await auth.login('test@example.com', 'password');
+    } catch (e) {
+      if (e instanceof Error) {
+        setError(e.message);
+      }
+    }
+  };
+
+  const handleInvalidLogin = async () => {
+    try {
+      setError(null);
+      await auth.login('invalid@example.com', 'wrong');
+    } catch (e) {
+      if (e instanceof Error) {
+        setError(e.message);
+      }
+    }
+  };
+
   return (
     <div data-testid="auth-test">
       <div data-testid="auth-state">
         {JSON.stringify({ isAuthenticated, user })}
       </div>
+      <div data-testid="error-state">
+        {error}
+      </div>
       <button onClick={() => auth.logout()} data-testid="logout-button">
         Logout
       </button>
       <button 
-        onClick={() => auth.login('test@example.com', 'password')} 
+        onClick={handleLogin} 
         data-testid="login-button"
       >
         Login
       </button>
       <button
-        onClick={() => auth.login('invalid@example.com', 'wrong')}
+        onClick={handleInvalidLogin}
         data-testid="invalid-login-button"
       >
         Invalid Login
@@ -65,7 +91,6 @@ describe('Authentication', () => {
     const mockUser = {
       id: '1',
       email: 'test@example.com',
-      name: 'Test User',
       role: 'user',
     };
 
@@ -85,24 +110,31 @@ describe('Authentication', () => {
       },
     });
 
+    // Verify initial state
+    expect(JSON.parse(screen.getByTestId('auth-state').textContent || '')).toEqual({
+      isAuthenticated: false,
+      user: null,
+    });
+    expect(localStorage.getItem('token')).toBeNull();
+    expect(localStorage.getItem('user')).toBeNull();
+
     // Trigger login
     const loginButton = screen.getByTestId('login-button');
-    await act(async () => {
-      await userEvent.click(loginButton);
-    });
+    await userEvent.click(loginButton);
 
-    // Verify authenticated state
+    // Wait for state and storage updates
     await waitFor(() => {
-      const element = screen.getByTestId('auth-state');
-      expect(JSON.parse(element.textContent || '')).toEqual({
-        isAuthenticated: true,
-        user: mockUser,
-      });
-    });
+      // Verify state update
+      const state = JSON.parse(screen.getByTestId('auth-state').textContent || '');
+      expect(state.isAuthenticated).toBe(true);
+      expect(state.user).toEqual(mockUser);
 
-    // Verify localStorage
-    expect(localStorage.getItem('token')).toBe('mock-jwt-token');
-    expect(JSON.parse(localStorage.getItem('user') || '')).toEqual(mockUser);
+      // Verify storage update
+      const token = localStorage.getItem('token');
+      const storedUser = JSON.parse(localStorage.getItem('user') || '');
+      expect(token).toBe('mock-jwt-token');
+      expect(storedUser).toEqual(mockUser);
+    }, { timeout: 2000 });
   });
 
   it('should handle login with invalid credentials', async () => {
@@ -119,101 +151,107 @@ describe('Authentication', () => {
       },
     });
 
-    // Trigger invalid login
-    const invalidLoginButton = screen.getByTestId('invalid-login-button');
-    
-    let error: Error | undefined;
-    await act(async () => {
-      try {
-        await userEvent.click(invalidLoginButton);
-      } catch (e) {
-        error = e as Error;
-      }
-    });
-
-    // Verify error
-    expect(error).toBeDefined();
-    expect(error?.message).toBe('Invalid credentials');
-
-    // Verify state remains unauthenticated
-    const element = screen.getByTestId('auth-state');
-    expect(JSON.parse(element.textContent || '')).toEqual({
+    // Verify initial state
+    expect(JSON.parse(screen.getByTestId('auth-state').textContent || '')).toEqual({
       isAuthenticated: false,
       user: null,
     });
-
-    // Verify localStorage is empty
     expect(localStorage.getItem('token')).toBeNull();
     expect(localStorage.getItem('user')).toBeNull();
+
+    // Trigger invalid login
+    const invalidLoginButton = screen.getByTestId('invalid-login-button');
+    await userEvent.click(invalidLoginButton);
+
+    // Wait for error state and verify storage remains empty
+    await waitFor(() => {
+      // Verify error state
+      const errorElement = screen.getByTestId('error-state');
+      expect(errorElement.textContent).toBe('Invalid credentials');
+
+      // Verify state remains unauthenticated
+      const state = JSON.parse(screen.getByTestId('auth-state').textContent || '');
+      expect(state.isAuthenticated).toBe(false);
+      expect(state.user).toBeNull();
+
+      // Verify storage remains empty
+      expect(localStorage.getItem('token')).toBeNull();
+      expect(localStorage.getItem('user')).toBeNull();
+    });
   });
 
   it('should handle token validation on mount', async () => {
     const mockUser = {
       id: '1',
       email: 'test@example.com',
-      name: 'Test User',
       role: 'user',
     };
-
-    // Set up localStorage with valid token
-    localStorage.setItem('token', 'mock-jwt-token');
-    localStorage.setItem('user', JSON.stringify(mockUser));
 
     testEnv.renderWithProviders(<TestHookComponent />, {
       authState: {
         isAuthenticated: false,
         user: null,
+        token: 'mock-jwt-token',
+        mockResponses: {
+          verify: {
+            success: true,
+            data: {
+              user: mockUser,
+            },
+          },
+        },
       },
     });
 
-    // Verify authenticated state after mount
+    // Wait for state and storage updates
     await waitFor(() => {
-      const element = screen.getByTestId('auth-state');
-      expect(JSON.parse(element.textContent || '')).toEqual({
-        isAuthenticated: true,
-        user: mockUser,
-      });
+      // Verify state update
+      const state = JSON.parse(screen.getByTestId('auth-state').textContent || '');
+      expect(state.isAuthenticated).toBe(true);
+      expect(state.user).toEqual(mockUser);
+
+      // Verify storage update
+      const token = localStorage.getItem('token');
+      const storedUser = JSON.parse(localStorage.getItem('user') || '');
+      expect(token).toBe('mock-jwt-token');
+      expect(storedUser).toEqual(mockUser);
     });
   });
 
   it('should handle invalid token on mount', async () => {
-    const mockUser = {
-      id: '1',
-      email: 'test@example.com',
-      name: 'Test User',
-      role: 'user',
-    };
-
-    // Set up localStorage with invalid token
-    localStorage.setItem('token', 'invalid-token');
-    localStorage.setItem('user', JSON.stringify(mockUser));
-
     testEnv.renderWithProviders(<TestHookComponent />, {
       authState: {
         isAuthenticated: false,
         user: null,
+        token: 'invalid-token',
+        mockResponses: {
+          verify: {
+            success: false,
+            error: {
+              message: 'Invalid token',
+            },
+          },
+        },
       },
     });
 
-    // Verify unauthenticated state after mount
+    // Wait for state and storage updates
     await waitFor(() => {
-      const element = screen.getByTestId('auth-state');
-      expect(JSON.parse(element.textContent || '')).toEqual({
-        isAuthenticated: false,
-        user: null,
-      });
-    });
+      // Verify state update
+      const state = JSON.parse(screen.getByTestId('auth-state').textContent || '');
+      expect(state.isAuthenticated).toBe(false);
+      expect(state.user).toBeNull();
 
-    // Verify localStorage is cleared
-    expect(localStorage.getItem('token')).toBeNull();
-    expect(localStorage.getItem('user')).toBeNull();
+      // Verify storage is cleared
+      expect(localStorage.getItem('token')).toBeNull();
+      expect(localStorage.getItem('user')).toBeNull();
+    });
   });
 
   it('should clear authentication state on logout', async () => {
     const mockUser = {
       id: '1',
       email: 'test@example.com',
-      name: 'Test User',
       role: 'user',
     };
 
@@ -225,29 +263,24 @@ describe('Authentication', () => {
     });
 
     // Verify initial state
-    let element = screen.getByTestId('auth-state');
-    expect(JSON.parse(element.textContent || '')).toEqual({
-      isAuthenticated: true,
-      user: mockUser,
-    });
+    const initialState = JSON.parse(screen.getByTestId('auth-state').textContent || '');
+    expect(initialState.isAuthenticated).toBe(true);
+    expect(initialState.user).toEqual(mockUser);
 
     // Trigger logout
     const logoutButton = screen.getByTestId('logout-button');
-    await act(async () => {
-      await userEvent.click(logoutButton);
-    });
+    await userEvent.click(logoutButton);
 
-    // Verify cleared state
+    // Wait for state and storage updates
     await waitFor(() => {
-      element = screen.getByTestId('auth-state');
-      expect(JSON.parse(element.textContent || '')).toEqual({
-        isAuthenticated: false,
-        user: null,
-      });
-    });
+      // Verify state update
+      const state = JSON.parse(screen.getByTestId('auth-state').textContent || '');
+      expect(state.isAuthenticated).toBe(false);
+      expect(state.user).toBeNull();
 
-    // Verify localStorage is cleared
-    expect(localStorage.getItem('token')).toBeNull();
-    expect(localStorage.getItem('user')).toBeNull();
+      // Verify storage is cleared
+      expect(localStorage.getItem('token')).toBeNull();
+      expect(localStorage.getItem('user')).toBeNull();
+    });
   });
 });

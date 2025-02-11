@@ -5,22 +5,27 @@ import { render, RenderOptions } from '@testing-library/react';
 import { AuthContext, User, AuthContextType } from '../../contexts/AuthContext';
 import { vi } from 'vitest';
 
-interface TestWrapperProps {
-  children: React.ReactNode;
-  initialAuth?: Partial<AuthContextType>;
+// Extended auth state to include token
+interface ExtendedAuthState extends Partial<AuthContextType> {
+  token?: string | null;
   mockResponses?: {
     login?: {
       success: boolean;
       data?: { user: User; token: string };
       error?: string;
     };
+    verify?: {
+      success: boolean;
+      data?: { user: User };
+      error?: { message: string };
+    };
   };
 }
 
-// Extended auth state to include token
-interface ExtendedAuthState extends Partial<AuthContextType> {
-  token?: string | null;
-  mockResponses?: TestWrapperProps['mockResponses'];
+interface TestWrapperProps {
+  children: React.ReactNode;
+  initialAuth?: ExtendedAuthState;
+  mockResponses?: ExtendedAuthState['mockResponses'];
 }
 
 // Extend RenderOptions to include authState
@@ -33,28 +38,33 @@ export const TestWrapper: React.FC<TestWrapperProps> = ({
   initialAuth,
   mockResponses,
 }) => {
-  const [isAuthenticated, setIsAuthenticated] = React.useState(
-    initialAuth?.isAuthenticated ?? false
-  );
-  const [user, setUser] = React.useState<User | null>(
-    initialAuth?.user ?? null
-  );
+  const [state, setState] = React.useState({
+    isAuthenticated: initialAuth?.isAuthenticated ?? false,
+    user: initialAuth?.user ?? null,
+  });
 
-  const mockAuth: AuthContextType = {
-    isAuthenticated,
-    user,
+  const updateAuthState = React.useCallback((newUser: User | null, isAuth: boolean, token?: string) => {
+    if (isAuth && newUser && token) {
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(newUser));
+    } else {
+      localStorage.clear();
+    }
+    setState({ isAuthenticated: isAuth, user: newUser });
+  }, []);
+
+  const mockAuth = React.useMemo<AuthContextType>(() => ({
+    isAuthenticated: state.isAuthenticated,
+    user: state.user,
     auth: {
       login: vi.fn(async (email: string, password: string) => {
-        // Use mock responses if provided, otherwise use default behavior
         if (mockResponses?.login) {
           if (!mockResponses.login.success) {
+            updateAuthState(null, false);
             throw new Error(mockResponses.login.error || 'Login failed');
           }
           const { user, token } = mockResponses.login.data!;
-          setUser(user);
-          setIsAuthenticated(true);
-          localStorage.setItem('token', token);
-          localStorage.setItem('user', JSON.stringify(user));
+          updateAuthState(user, true, token);
           return;
         }
 
@@ -67,26 +77,65 @@ export const TestWrapper: React.FC<TestWrapperProps> = ({
           };
           const mockToken = 'mock-jwt-token';
           
-          setUser(mockUser);
-          setIsAuthenticated(true);
-          localStorage.setItem('token', mockToken);
-          localStorage.setItem('user', JSON.stringify(mockUser));
+          updateAuthState(mockUser, true, mockToken);
+          return;
         } else {
+          updateAuthState(null, false);
           throw new Error('Invalid credentials');
         }
       }),
       logout: vi.fn(async () => {
-        setUser(null);
-        setIsAuthenticated(false);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        updateAuthState(null, false);
       }),
       validateToken: vi.fn(async (token: string) => {
-        // Mock token validation
-        return token === 'mock-jwt-token';
+        if (mockResponses?.verify) {
+          if (!mockResponses.verify.success) {
+            updateAuthState(null, false);
+            return false;
+          }
+          const mockUser = mockResponses.verify.data?.user || {
+            id: '1',
+            email: 'test@example.com',
+            role: 'user',
+          };
+          updateAuthState(mockUser, true, token);
+          return true;
+        }
+
+        // Default behavior
+        if (token === 'mock-jwt-token') {
+          const mockUser = {
+            id: '1',
+            email: 'test@example.com',
+            role: 'user',
+          };
+          updateAuthState(mockUser, true, token);
+          return true;
+        }
+        updateAuthState(null, false);
+        return false;
       }),
     },
-  };
+  }), [state.isAuthenticated, state.user, mockResponses, updateAuthState]);
+
+  // Initialize auth state
+  React.useEffect(() => {
+    const initializeAuth = async () => {
+      updateAuthState(null, false);
+      if (initialAuth?.token) {
+        if (initialAuth.isAuthenticated && initialAuth.user) {
+          updateAuthState(initialAuth.user, true, initialAuth.token);
+        } else {
+          const isValid = await mockAuth.auth.validateToken(initialAuth.token);
+          if (!isValid) {
+            updateAuthState(null, false);
+          }
+        }
+      }
+    };
+
+    initializeAuth().catch(console.error);
+  }, [initialAuth, mockAuth.auth.validateToken, updateAuthState]);
 
   return (
     <ChakraProvider>

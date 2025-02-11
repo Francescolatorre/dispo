@@ -55,14 +55,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const validateToken = async (token: string): Promise<boolean> => {
     try {
-      const response = await fetch('/api/auth/validate', {
-        method: 'POST',
+      const response = await fetch('/api/auth/verify', {
+        method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
-      return response.ok;
+      
+      if (!response.ok)
+ {
+        return false;
+      }
+      
+      const data = await response.json();
+      setUser(data.user);
+      setIsAuthenticated(true);
+      return true;
     } catch (error) {
       console.error('Token validation error:', error);
       return false;
