@@ -11,6 +11,49 @@ export class UserRepository extends BaseRepository {
   }
 
   /**
+   * Get SQL for creating users table
+   * @returns {string} Table creation SQL
+   */
+  getSchemaSQL() {
+    return `
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        role VARCHAR(50) NOT NULL DEFAULT 'user',
+        last_login TIMESTAMP WITH TIME ZONE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+  }
+
+  /**
+   * Get SQL for additional schema elements (triggers, indexes, etc.)
+   * @returns {string} Additional schema SQL
+   */
+  getAdditionalSchemaSQL() {
+    return `
+      -- Create updated_at trigger function if it doesn't exist
+      CREATE OR REPLACE FUNCTION update_updated_at_column()
+      RETURNS TRIGGER AS $$
+      BEGIN
+        NEW.updated_at = CURRENT_TIMESTAMP;
+        RETURN NEW;
+      END;
+      $$ language 'plpgsql';
+
+      -- Create trigger for updated_at
+      DROP TRIGGER IF EXISTS update_users_updated_at ON users;
+      CREATE TRIGGER update_users_updated_at
+        BEFORE UPDATE ON users
+        FOR EACH ROW
+        EXECUTE FUNCTION update_updated_at_column();
+    `;
+  }
+
+  /**
    * Create a new user
    * @param {Object} userData User data to insert
    * @param {string} userData.email User's email
@@ -21,11 +64,19 @@ export class UserRepository extends BaseRepository {
    */
   async createUser(userData) {
     const { email, password, name, role = 'user' } = userData;
-    const result = await this.executeQuery(
-      'INSERT INTO users (email, password, name, role) VALUES ($1, $2, $3, $4) RETURNING id, email, name, role, created_at',
-      [email, password, name, role]
-    );
-    return result.rows[0];
+
+    try {
+      const result = await this.executeQuery(
+        'INSERT INTO users (email, password, name, role) VALUES ($1, $2, $3, $4) RETURNING id, email, name, role, created_at',
+        [email, password, name, role]
+      );
+      return result.rows[0];
+    } catch (error) {
+      if (error.code === '23505' && error.constraint === 'users_email_key') {
+        throw new ConflictError('User', 'email', email);
+      }
+      throw error;
+    }
   }
 
   /**
@@ -102,16 +153,23 @@ export class UserRepository extends BaseRepository {
       .join(', ');
     const values = updates.map(key => updateData[key]);
 
-    const result = await this.executeQuery(
-      `UPDATE users SET ${setClause} WHERE id = $1 RETURNING id, email, name, role, last_login, updated_at`,
-      [id, ...values]
-    );
+    try {
+      const result = await this.executeQuery(
+        `UPDATE users SET ${setClause} WHERE id = $1 RETURNING id, email, name, role, last_login, updated_at`,
+        [id, ...values]
+      );
 
-    if (!result.rows[0]) {
-      throw new NotFoundError('User', id);
+      if (!result.rows[0]) {
+        throw new NotFoundError('User', id);
+      }
+
+      return result.rows[0];
+    } catch (error) {
+      if (error.code === '23505' && error.constraint === 'users_email_key') {
+        throw new ConflictError('User', 'email', updateData.email);
+      }
+      throw error;
     }
-
-    return result.rows[0];
   }
 
   /**

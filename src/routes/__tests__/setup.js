@@ -1,79 +1,165 @@
-import pool from '../../config/database.js';
+import { testDb } from '../../test/TestDatabaseManager.js';
+import { logger } from '../../utils/logger.js';
+import { metrics } from '../../utils/metrics.js';
 
+/**
+ * Set up test database with proper error handling
+ * @returns {Promise<void>}
+ */
 export async function setupTestDb() {
-  const client = await pool.connect();
+  const startTime = process.hrtime();
+
+  logger.info('Setting up test database', {
+    context: {
+      operation: 'setupTestDb',
+      service: 'TestSetup'
+    }
+  });
+
   try {
-    await client.query('BEGIN');
+    await testDb.setup();
 
-    // Drop existing tables and functions
-    await client.query('DROP TABLE IF EXISTS users CASCADE');
-    await client.query('DROP FUNCTION IF EXISTS update_updated_at_column() CASCADE');
+    const duration = getDurationMs(startTime);
+    metrics.observe('test_setup_duration', {
+      value: duration,
+      operation: 'setup'
+    });
 
-    // Create trigger function
-    await client.query(`
-      CREATE OR REPLACE FUNCTION update_updated_at_column()
-      RETURNS TRIGGER AS $$
-      BEGIN
-        NEW.updated_at = CURRENT_TIMESTAMP;
-        RETURN NEW;
-      END;
-      $$ language 'plpgsql';
-    `);
-
-    // Create users table with email uniqueness constraint
-    await client.query(`
-      CREATE TABLE users (
-        id SERIAL PRIMARY KEY,
-        email VARCHAR(255) NOT NULL,
-        password VARCHAR(255) NOT NULL,
-        name VARCHAR(255) NOT NULL,
-        role VARCHAR(50) NOT NULL DEFAULT 'user',
-        last_login TIMESTAMP WITH TIME ZONE,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        CONSTRAINT users_email_unique UNIQUE (email)
-      )
-    `);
-
-    // Create trigger for updated_at
-    await client.query(`
-      DROP TRIGGER IF EXISTS update_users_updated_at ON users;
-      CREATE TRIGGER update_users_updated_at
-        BEFORE UPDATE ON users
-        FOR EACH ROW
-        EXECUTE FUNCTION update_updated_at_column();
-    `);
-
-    await client.query('COMMIT');
+    logger.info('Test database setup completed', {
+      context: {
+        duration,
+        service: 'TestSetup'
+      }
+    });
   } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('Error setting up test database:', error);
+    const duration = getDurationMs(startTime);
+    metrics.observe('test_setup_duration', {
+      value: duration,
+      operation: 'setup',
+      status: 'error'
+    });
+
+    logger.error('Test database setup failed', {
+      error,
+      context: {
+        duration,
+        service: 'TestSetup'
+      }
+    });
     throw error;
-  } finally {
-    client.release();
   }
 }
 
-// Export a function to clean the database
+/**
+ * Clean test database with proper error handling
+ * @returns {Promise<void>}
+ */
 export async function cleanTestDb() {
-  const client = await pool.connect();
+  const startTime = process.hrtime();
+
+  logger.info('Cleaning test database', {
+    context: {
+      operation: 'cleanTestDb',
+      service: 'TestSetup'
+    }
+  });
+
   try {
-    await client.query('BEGIN');
-    await client.query('DELETE FROM users');
-    await client.query('COMMIT');
+    await testDb.cleanup();
+
+    const duration = getDurationMs(startTime);
+    metrics.observe('test_cleanup_duration', {
+      value: duration,
+      operation: 'cleanup'
+    });
+
+    logger.info('Test database cleanup completed', {
+      context: {
+        duration,
+        service: 'TestSetup'
+      }
+    });
   } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('Error cleaning test database:', error);
+    const duration = getDurationMs(startTime);
+    metrics.observe('test_cleanup_duration', {
+      value: duration,
+      operation: 'cleanup',
+      status: 'error'
+    });
+
+    logger.error('Test database cleanup failed', {
+      error,
+      context: {
+        duration,
+        service: 'TestSetup'
+      }
+    });
     throw error;
-  } finally {
-    client.release();
   }
 }
 
-// Run setup before tests
-if (require.main === module) {
-  setupTestDb()
-    .then(() => console.log('Test database setup complete'))
-    .catch(console.error)
-    .finally(() => pool.end());
+/**
+ * Create a test transaction
+ * @returns {Promise<import('pg').PoolClient>} Database client with active transaction
+ */
+export async function createTestTransaction() {
+  const startTime = process.hrtime();
+
+  logger.info('Creating test transaction', {
+    context: {
+      operation: 'createTestTransaction',
+      service: 'TestSetup'
+    }
+  });
+
+  try {
+    const client = await testDb.createTransaction();
+
+    const duration = getDurationMs(startTime);
+    metrics.observe('test_transaction_duration', {
+      value: duration,
+      operation: 'create'
+    });
+
+    return client;
+  } catch (error) {
+    const duration = getDurationMs(startTime);
+    metrics.observe('test_transaction_duration', {
+      value: duration,
+      operation: 'create',
+      status: 'error'
+    });
+
+    logger.error('Failed to create test transaction', {
+      error,
+      context: {
+        duration,
+        service: 'TestSetup'
+      }
+    });
+    throw error;
+  }
 }
+
+/**
+ * Create test data factory
+ * @param {string} type Repository type
+ * @param {import('pg').PoolClient} [client] Optional database client for transactions
+ * @returns {Object} Test data factory
+ */
+export function createTestDataFactory(type, client = null) {
+  return testDb.createDataFactory(type, client);
+}
+
+/**
+ * Get duration in milliseconds
+ * @param {[number, number]} startTime Start time from process.hrtime()
+ * @returns {number} Duration in milliseconds
+ */
+function getDurationMs(startTime) {
+  const [seconds, nanoseconds] = process.hrtime(startTime);
+  return seconds * 1000 + nanoseconds / 1000000;
+}
+
+// Export singleton instance for convenience
+export { testDb };

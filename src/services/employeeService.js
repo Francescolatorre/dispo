@@ -1,151 +1,242 @@
-const pool = require('../config/database');
+import { EmployeeRepository } from '../repositories/employee.repository.js';
+import { logger } from '../utils/logger.js';
+import { ValidationError, NotFoundError } from '../errors/index.js';
 
-class EmployeeService {
-  /**
-   * Get all employees
-   */
-  async getEmployees() {
-    const result = await pool.query('SELECT * FROM employees ORDER BY name');
-    return result.rows;
-  }
-
-  /**
-   * Get employee by ID
-   */
-  async getEmployeeById(id) {
-    const result = await pool.query('SELECT * FROM employees WHERE id = $1', [id]);
-    return result.rows[0];
+export class EmployeeService {
+  constructor(employeeRepository = new EmployeeRepository()) {
+    this.employeeRepository = employeeRepository;
   }
 
   /**
    * Create a new employee
+   * @param {Object} employeeData Employee data
+   * @returns {Promise<Object>} Created employee
    */
-  async createEmployee(data) {
-    const result = await pool.query(`
-      INSERT INTO employees (
-        name, employee_number, entry_date, email, phone,
-        position, seniority_level, level_code, qualifications,
-        work_time_factor, contract_end_date, status, part_time_factor
-      ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
-      ) RETURNING *
-    `, [
-      data.name,
-      data.employee_number,
-      data.entry_date,
-      data.email,
-      data.phone,
-      data.position,
-      data.seniority_level,
-      data.level_code,
-      data.qualifications,
-      data.work_time_factor,
-      data.contract_end_date,
-      data.status || 'active',
-      data.part_time_factor || 100.00
-    ]);
-    return result.rows[0];
+  async createEmployee(employeeData) {
+    logger.info('Creating new employee', {
+      context: {
+        employeeNumber: employeeData.employee_number,
+        email: employeeData.email,
+        service: 'EmployeeService',
+        operation: 'createEmployee'
+      }
+    });
+
+    try {
+      return await this.employeeRepository.withTransaction(async () => {
+        const employee = await this.employeeRepository.createEmployee(employeeData);
+
+        logger.info('Employee created successfully', {
+          context: {
+            employeeId: employee.id,
+            employeeNumber: employee.employee_number,
+            email: employee.email
+          }
+        });
+
+        return employee;
+      });
+    } catch (error) {
+      logger.error('Failed to create employee', {
+        error,
+        context: {
+          employeeNumber: employeeData.employee_number,
+          email: employeeData.email,
+          service: 'EmployeeService',
+          operation: 'createEmployee'
+        }
+      });
+      throw error;
+    }
   }
 
   /**
-   * Update an employee
+   * Get employee by ID
+   * @param {string} id Employee ID
+   * @returns {Promise<Object>} Employee object
    */
-  async updateEmployee(id, data) {
-    const result = await pool.query(`
-      UPDATE employees SET
-        name = COALESCE($1, name),
-        employee_number = COALESCE($2, employee_number),
-        entry_date = COALESCE($3, entry_date),
-        email = COALESCE($4, email),
-        phone = COALESCE($5, phone),
-        position = COALESCE($6, position),
-        seniority_level = COALESCE($7, seniority_level),
-        level_code = COALESCE($8, level_code),
-        qualifications = COALESCE($9, qualifications),
-        work_time_factor = COALESCE($10, work_time_factor),
-        contract_end_date = COALESCE($11, contract_end_date),
-        status = COALESCE($12, status),
-        part_time_factor = COALESCE($13, part_time_factor),
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = $14
-      RETURNING *
-    `, [
-      data.name,
-      data.employee_number,
-      data.entry_date,
-      data.email,
-      data.phone,
-      data.position,
-      data.seniority_level,
-      data.level_code,
-      data.qualifications,
-      data.work_time_factor,
-      data.contract_end_date,
-      data.status,
-      data.part_time_factor,
-      id
-    ]);
-    return result.rows[0];
+  async getEmployeeById(id) {
+    logger.info('Fetching employee by ID', {
+      context: {
+        employeeId: id,
+        service: 'EmployeeService',
+        operation: 'getEmployeeById'
+      }
+    });
+
+    try {
+      const employee = await this.employeeRepository.findById(id);
+
+      logger.debug('Employee found', {
+        context: {
+          employeeId: id,
+          employeeNumber: employee.employee_number
+        }
+      });
+
+      return employee;
+    } catch (error) {
+      logger.error('Failed to fetch employee', {
+        error,
+        context: {
+          employeeId: id,
+          service: 'EmployeeService',
+          operation: 'getEmployeeById'
+        }
+      });
+      throw error;
+    }
   }
 
   /**
-   * Delete an employee
+   * List all employees with pagination
+   * @param {Object} options Pagination options
+   * @returns {Promise<{employees: Array, totalCount: number, hasMore: boolean}>}
+   */
+  async listEmployees(options = {}) {
+    logger.info('Listing employees', {
+      context: {
+        options,
+        service: 'EmployeeService',
+        operation: 'listEmployees'
+      }
+    });
+
+    try {
+      const result = await this.employeeRepository.listEmployees(options);
+
+      logger.debug('Employees listed successfully', {
+        context: {
+          count: result.employees.length,
+          totalCount: result.totalCount,
+          hasMore: result.hasMore
+        }
+      });
+
+      return result;
+    } catch (error) {
+      logger.error('Failed to list employees', {
+        error,
+        context: {
+          options,
+          service: 'EmployeeService',
+          operation: 'listEmployees'
+        }
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Update employee
+   * @param {string} id Employee ID
+   * @param {Object} updateData Update data
+   * @returns {Promise<Object>} Updated employee
+   */
+  async updateEmployee(id, updateData) {
+    logger.info('Updating employee', {
+      context: {
+        employeeId: id,
+        updateFields: Object.keys(updateData),
+        service: 'EmployeeService',
+        operation: 'updateEmployee'
+      }
+    });
+
+    try {
+      return await this.employeeRepository.withTransaction(async () => {
+        // Verify employee exists
+        await this.employeeRepository.findById(id);
+
+        const employee = await this.employeeRepository.updateEmployee(id, updateData);
+
+        logger.info('Employee updated successfully', {
+          context: {
+            employeeId: id,
+            employeeNumber: employee.employee_number,
+            updatedFields: Object.keys(updateData)
+          }
+        });
+
+        return employee;
+      });
+    } catch (error) {
+      logger.error('Failed to update employee', {
+        error,
+        context: {
+          employeeId: id,
+          updateData,
+          service: 'EmployeeService',
+          operation: 'updateEmployee'
+        }
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Delete employee
+   * @param {string} id Employee ID
+   * @returns {Promise<void>}
    */
   async deleteEmployee(id) {
-    await pool.query('DELETE FROM employees WHERE id = $1', [id]);
+    logger.info('Deleting employee', {
+      context: {
+        employeeId: id,
+        service: 'EmployeeService',
+        operation: 'deleteEmployee'
+      }
+    });
+
+    try {
+      await this.employeeRepository.withTransaction(async () => {
+        await this.employeeRepository.deleteEmployee(id);
+
+        logger.info('Employee deleted successfully', {
+          context: {
+            employeeId: id
+          }
+        });
+      });
+    } catch (error) {
+      logger.error('Failed to delete employee', {
+        error,
+        context: {
+          employeeId: id,
+          service: 'EmployeeService',
+          operation: 'deleteEmployee'
+        }
+      });
+      throw error;
+    }
   }
 
   /**
-   * Get employee assignments
+   * Validate employee number format
+   * @param {string} employeeNumber Employee number to validate
+   * @returns {boolean} True if valid
    */
-  async getEmployeeAssignments(id) {
-    const result = await pool.query(`
-      SELECT pa.*, p.name as project_name, p.project_number
-      FROM project_assignments pa
-      JOIN projects p ON pa.project_id = p.id
-      WHERE pa.employee_id = $1
-      ORDER BY pa.start_date
-    `, [id]);
-    return result.rows;
+  validateEmployeeNumber(employeeNumber) {
+    const employeeNumberRegex = /^[A-Z0-9]+$/;
+    if (!employeeNumberRegex.test(employeeNumber)) {
+      throw new ValidationError(
+        'Employee number must contain only uppercase letters and numbers',
+        'employee_number'
+      );
+    }
+    return true;
   }
 
   /**
-   * Get employee availability
+   * Validate email format
+   * @param {string} email Email to validate
+   * @returns {boolean} True if valid
    */
-  async getEmployeeAvailability(id, startDate, endDate) {
-    const result = await pool.query(`
-      WITH RECURSIVE dates AS (
-        SELECT $2::date AS date
-        UNION ALL
-        SELECT date + 1
-        FROM dates
-        WHERE date < $3::date
-      ),
-      daily_assignments AS (
-        SELECT 
-          d.date,
-          COALESCE(SUM(pa.allocation_percentage), 0) as workload,
-          json_agg(json_build_object(
-            'project_id', pa.project_id,
-            'allocation', pa.allocation_percentage,
-            'role', pa.role
-          )) FILTER (WHERE pa.id IS NOT NULL) as assignments
-        FROM dates d
-        LEFT JOIN project_assignments pa ON 
-          pa.employee_id = $1 AND
-          pa.status = 'active' AND
-          d.date BETWEEN pa.start_date AND pa.end_date
-        GROUP BY d.date
-      )
-      SELECT 
-        date::text,
-        workload,
-        COALESCE(assignments, '[]'::json) as assignments
-      FROM daily_assignments
-      ORDER BY date
-    `, [id, startDate, endDate]);
-    return result.rows;
+  validateEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      throw new ValidationError('Invalid email format', 'email');
+    }
+    return true;
   }
 }
-
-module.exports = new EmployeeService();

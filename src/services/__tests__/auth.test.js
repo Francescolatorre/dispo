@@ -1,242 +1,281 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import jwt from 'jsonwebtoken';
+import { describe, it, expect, beforeEach, beforeAll, afterEach, vi } from 'vitest';
 import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 import { AuthService } from '../authService.js';
 import { UserRepository } from '../../repositories/user.repository.js';
-import { AuthorizationError, ValidationError, NotFoundError } from '../../errors/index.js';
+import { AuthorizationError, ValidationError } from '../../errors/index.js';
+import { testDb, createTestTransaction } from '../../routes/__tests__/setup.js';
+import { logger } from '../../utils/logger.js';
+import { metrics } from '../../utils/metrics.js';
 
-// Mock UserRepository
-vi.mock('../../repositories/user.repository.js');
+// Mock logger and metrics
+vi.mock('../../utils/logger.js', () => ({
+  logger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn()
+  }
+}));
 
-// Set up test environment
-process.env.JWT_SECRET = 'test-secret-key';
-process.env.NODE_ENV = 'test';
+vi.mock('../../utils/metrics.js', () => ({
+  metrics: {
+    increment: vi.fn(),
+    observe: vi.fn()
+  }
+}));
 
 describe('AuthService', () => {
   let authService;
   let userRepository;
+  let client;
+  let testUser;
   let testCount = 0;
-
-  beforeEach(() => {
-    // Reset all mocks before each test
-    vi.clearAllMocks();
-    
-    // Create a fresh mock repository for each test
-    userRepository = new UserRepository();
-    userRepository.withTransaction = vi.fn(callback => callback());
-    
-    // Create a new service instance with the mock repository
-    authService = new AuthService(userRepository);
-    testCount++;
-  });
 
   const getUniqueEmail = () => `test${testCount}@example.com`;
 
-  describe('createUser', () => {
-    it('should create a new user with hashed password', async () => {
-      const email = getUniqueEmail();
-      const password = 'password123';
-      const name = 'Test User';
-      const role = 'user';
+  beforeAll(async () => {
+    await testDb.setup();
+  });
 
-      const mockUser = {
-        id: 1,
-        email,
-        name,
-        role,
-        created_at: new Date()
-      };
+  beforeEach(async () => {
+    client = await createTestTransaction();
+    userRepository = new UserRepository(client);
+    authService = new AuthService(userRepository);
+    testCount++;
 
-      userRepository.createUser = vi.fn().mockResolvedValue(mockUser);
-
-      const user = await authService.createUser(email, password, name, role);
-
-      expect(userRepository.createUser).toHaveBeenCalledWith({
-        email,
-        password: expect.stringMatching(/^\$2b\$\d+\$/), // bcrypt hash pattern
-        name,
-        role
-      });
-
-      expect(user).toEqual(mockUser);
+    // Create test user
+    const hashedPassword = await bcrypt.hash('testpass123', 10);
+    testUser = await userRepository.createUser({
+      email: 'test@example.com',
+      password: hashedPassword,
+      name: 'Test User',
+      role: 'user'
     });
 
-    it('should use transaction for user creation', async () => {
-      const email = getUniqueEmail();
-      userRepository.createUser = vi.fn().mockResolvedValue({ id: 1, email });
+    // Clear mock calls
+    vi.clearAllMocks();
+  });
 
-      await authService.createUser(email, 'password', 'name');
+  afterEach(async () => {
+    await client.query('ROLLBACK');
+    await client.release();
+  });
 
-      expect(userRepository.withTransaction).toHaveBeenCalled();
+  describe('initialize', () => {
+    it('should initialize schema', async () => {
+      const newService = new AuthService();
+      await newService.initialize();
+
+      // Verify logging
+      expect(logger.info).toHaveBeenCalledWith(
+        'Initializing auth service',
+        expect.any(Object)
+      );
+      expect(logger.info).toHaveBeenCalledWith(
+        'Auth service initialized',
+        expect.any(Object)
+      );
+    });
+
+    it('should handle initialization errors', async () => {
+      const mockRepo = {
+        initializeSchema: vi.fn().mockRejectedValue(new Error('Init failed'))
+      };
+      const service = new AuthService(mockRepo);
+
+      await expect(service.initialize()).rejects.toThrow('Init failed');
+
+      // Verify error logging
+      expect(logger.error).toHaveBeenCalledWith(
+        'Failed to initialize auth service',
+        expect.any(Object)
+      );
     });
   });
 
   describe('login', () => {
-    it('should return user data and token for valid credentials', async () => {
-      const email = getUniqueEmail();
-      const password = 'password123';
-      const hashedPassword = await bcrypt.hash(password, 10);
-      const mockUser = {
-        id: 1,
-        email,
-        name: 'Test User',
-        role: 'user',
-        password: hashedPassword
-      };
+    it('should authenticate valid credentials', async () => {
+      const result = await authService.login('test@example.com', 'testpass123');
 
-      userRepository.findByEmail = vi.fn().mockResolvedValue(mockUser);
-      userRepository.updateLastLogin = vi.fn().mockResolvedValue({
-        ...mockUser,
-        last_login: new Date()
-      });
-
-      const result = await authService.login(email, password);
-
-      expect(result).toHaveProperty('user');
       expect(result).toHaveProperty('token');
-      expect(result.user.email).toBe(email);
-      expect(result.user).not.toHaveProperty('password');
-      expect(userRepository.updateLastLogin).toHaveBeenCalledWith(mockUser.id);
-    });
+      expect(result).toHaveProperty('user');
+      expect(result.user).toHaveProperty('email', 'test@example.com');
+      expect(result.user.password).toBeUndefined();
 
-    it('should throw AuthorizationError for invalid password', async () => {
-      const email = getUniqueEmail();
-      const hashedPassword = await bcrypt.hash('correct-password', 10);
-      
-      userRepository.findByEmail = vi.fn().mockResolvedValue({
-        id: 1,
-        email,
-        password: hashedPassword
-      });
-
-      await expect(
-        authService.login(email, 'wrong-password')
-      ).rejects.toThrow(AuthorizationError);
-    });
-
-    it('should throw AuthorizationError for non-existent user', async () => {
-      userRepository.findByEmail = vi.fn().mockRejectedValue(
-        new NotFoundError('User', 'email')
+      // Verify logging
+      expect(logger.info).toHaveBeenCalledWith(
+        'Login attempt',
+        expect.any(Object)
+      );
+      expect(logger.info).toHaveBeenCalledWith(
+        'Login successful',
+        expect.any(Object)
       );
 
-      await expect(
-        authService.login('nonexistent@example.com', 'password')
-      ).rejects.toThrow(AuthorizationError);
+      // Verify metrics
+      expect(metrics.observe).toHaveBeenCalledWith(
+        'auth_duration',
+        expect.any(Object)
+      );
+    });
+
+    it('should reject invalid password', async () => {
+      await expect(authService.login('test@example.com', 'wrongpass'))
+        .rejects
+        .toThrow(AuthorizationError);
+
+      // Verify logging
+      expect(logger.error).toHaveBeenCalledWith(
+        'Login failed',
+        expect.any(Object)
+      );
+
+      // Verify metrics
+      expect(metrics.increment).toHaveBeenCalledWith(
+        'auth_failures',
+        expect.any(Object)
+      );
+    });
+
+    it('should reject non-existent user', async () => {
+      await expect(authService.login('nonexistent@example.com', 'testpass123'))
+        .rejects
+        .toThrow(AuthorizationError);
+
+      // Verify logging
+      expect(logger.error).toHaveBeenCalledWith(
+        'Login failed',
+        expect.any(Object)
+      );
+    });
+
+    it('should update last_login timestamp', async () => {
+      await authService.login('test@example.com', 'testpass123');
+
+      const user = await userRepository.findByEmail('test@example.com');
+      expect(user.last_login).toBeDefined();
     });
   });
 
   describe('validateToken', () => {
-    it('should return true for valid token', async () => {
-      const mockUser = {
-        id: 1,
-        email: getUniqueEmail()
-      };
-
-      userRepository.findById = vi.fn().mockResolvedValue(mockUser);
-
+    it('should validate valid token', async () => {
       const token = jwt.sign(
-        { userId: mockUser.id },
+        { userId: testUser.id, email: testUser.email },
         process.env.JWT_SECRET,
-        { expiresIn: '1h' }
+        { expiresIn: '24h' }
       );
 
       const isValid = await authService.validateToken(token);
+
       expect(isValid).toBe(true);
-      expect(userRepository.findById).toHaveBeenCalledWith(mockUser.id);
-    });
 
-    it('should throw AuthorizationError for invalid token', async () => {
-      await expect(
-        authService.validateToken('invalid-token')
-      ).rejects.toThrow(AuthorizationError);
-    });
-
-    it('should return false when user not found', async () => {
-      userRepository.findById = vi.fn().mockRejectedValue(
-        new NotFoundError('User', 1)
+      // Verify logging
+      expect(logger.debug).toHaveBeenCalledWith(
+        'Token validated successfully',
+        expect.any(Object)
       );
+    });
 
+    it('should reject expired token', async () => {
       const token = jwt.sign(
-        { userId: 1 },
+        { userId: testUser.id, email: testUser.email },
         process.env.JWT_SECRET,
-        { expiresIn: '1h' }
+        { expiresIn: '-1h' }
       );
 
       const isValid = await authService.validateToken(token);
+
       expect(isValid).toBe(false);
+
+      // Verify logging
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Token validation failed',
+        expect.any(Object)
+      );
+    });
+
+    it('should reject invalid token', async () => {
+      const isValid = await authService.validateToken('invalid.token.here');
+
+      expect(isValid).toBe(false);
+
+      // Verify logging
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Token validation failed',
+        expect.any(Object)
+      );
     });
   });
 
   describe('changePassword', () => {
-    it('should change password when current password is correct', async () => {
-      const userId = 1;
-      const currentPassword = 'current-password';
-      const newPassword = 'new-password';
-      const hashedPassword = await bcrypt.hash(currentPassword, 10);
+    it('should change password with valid current password', async () => {
+      const result = await authService.changePassword(
+        testUser.id,
+        'testpass123',
+        'newpass123'
+      );
 
-      const mockUser = {
-        id: userId,
-        password: hashedPassword
-      };
+      expect(result).toHaveProperty('id', testUser.id);
+      expect(result.password).toBeUndefined();
 
-      userRepository.findById = vi.fn().mockResolvedValue(mockUser);
-      userRepository.updateUser = vi.fn().mockResolvedValue({
-        ...mockUser,
-        updated_at: new Date()
-      });
+      // Verify can login with new password
+      const loginResult = await authService.login('test@example.com', 'newpass123');
+      expect(loginResult).toHaveProperty('token');
 
-      const result = await authService.changePassword(userId, currentPassword, newPassword);
-
-      expect(result).toHaveProperty('updated_at');
-      expect(userRepository.updateUser).toHaveBeenCalledWith(
-        userId,
-        {
-          password: expect.stringMatching(/^\$2b\$\d+\$/) // bcrypt hash pattern
-        }
+      // Verify logging
+      expect(logger.info).toHaveBeenCalledWith(
+        'Password change attempt',
+        expect.any(Object)
+      );
+      expect(logger.info).toHaveBeenCalledWith(
+        'Password changed successfully',
+        expect.any(Object)
       );
     });
 
-    it('should throw ValidationError when current password is incorrect', async () => {
-      const userId = 1;
-      const hashedPassword = await bcrypt.hash('correct-password', 10);
+    it('should reject invalid current password', async () => {
+      await expect(authService.changePassword(
+        testUser.id,
+        'wrongpass',
+        'newpass123'
+      )).rejects.toThrow(ValidationError);
 
-      userRepository.findById = vi.fn().mockResolvedValue({
-        id: userId,
-        password: hashedPassword
-      });
-
-      await expect(
-        authService.changePassword(userId, 'wrong-password', 'new-password')
-      ).rejects.toThrow(ValidationError);
-    });
-
-    it('should throw NotFoundError when user does not exist', async () => {
-      userRepository.findById = vi.fn().mockRejectedValue(
-        new NotFoundError('User', 999)
+      // Verify logging
+      expect(logger.error).toHaveBeenCalledWith(
+        'Password change failed',
+        expect.any(Object)
       );
-
-      await expect(
-        authService.changePassword(999, 'password', 'new-password')
-      ).rejects.toThrow(NotFoundError);
     });
 
-    it('should use transaction for password change', async () => {
-      const userId = 1;
-      const currentPassword = 'current-password';
-      const hashedPassword = await bcrypt.hash(currentPassword, 10);
+    it('should handle non-existent user', async () => {
+      await expect(authService.changePassword(
+        99999,
+        'testpass123',
+        'newpass123'
+      )).rejects.toThrow(AuthorizationError);
 
-      userRepository.findById = vi.fn().mockResolvedValue({
-        id: userId,
-        password: hashedPassword
-      });
-      userRepository.updateUser = vi.fn().mockResolvedValue({
-        id: userId,
-        updated_at: new Date()
-      });
+      // Verify logging
+      expect(logger.error).toHaveBeenCalledWith(
+        'Password change failed',
+        expect.any(Object)
+      );
+    });
+  });
 
-      await authService.changePassword(userId, currentPassword, 'new-password');
+  describe('findUserById', () => {
+    it('should find existing user', async () => {
+      const user = await authService.findUserById(testUser.id);
 
-      expect(userRepository.withTransaction).toHaveBeenCalled();
+      expect(user).toHaveProperty('id', testUser.id);
+      expect(user).toHaveProperty('email', testUser.email);
+      expect(user.password).toBeUndefined();
+    });
+
+    it('should handle non-existent user', async () => {
+      await expect(authService.findUserById(99999))
+        .rejects
+        .toThrow(AuthorizationError);
     });
   });
 });

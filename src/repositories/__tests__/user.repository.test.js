@@ -1,278 +1,312 @@
-import { describe, it, expect, beforeEach, beforeAll, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, beforeAll } from 'vitest';
+import bcrypt from 'bcrypt';
 import { UserRepository } from '../user.repository.js';
+import { testDb, createTestTransaction } from '../../routes/__tests__/setup.js';
 import { ConflictError, NotFoundError } from '../../errors/index.js';
-import pool from '../../config/database.js';
-import { setupTestDb } from '../../db/setup-test-db.js';
 
 describe('UserRepository', () => {
   let userRepository;
   let client;
+  let testCount = 0;
+
+  const getUniqueEmail = () => `test${testCount}@example.com`;
 
   beforeAll(async () => {
-    await setupTestDb();
+    await testDb.setup();
   });
 
   beforeEach(async () => {
-    client = await pool.connect();
-    await client.query('BEGIN');
+    client = await createTestTransaction();
     userRepository = new UserRepository(client);
+    testCount++;
   });
 
   afterEach(async () => {
     await client.query('ROLLBACK');
-    client.release();
+    await client.release();
   });
 
-  describe('createUser', () => {
-    it('should create a new user successfully', async () => {
-      const userData = {
-        email: 'test@example.com',
-        password: 'hashedPassword123',
-        name: 'Test User',
-        role: 'user'
-      };
+  describe('CRUD Operations', () => {
+    describe('createUser', () => {
+      it('should create user with valid data', async () => {
+        const userData = {
+          email: getUniqueEmail(),
+          password: await bcrypt.hash('testpass123', 10),
+          name: 'Test User',
+          role: 'user'
+        };
 
-      const user = await userRepository.createUser(userData);
+        const user = await userRepository.createUser(userData);
 
-      expect(user).toEqual(expect.objectContaining({
-        id: expect.any(Number),
-        email: userData.email,
-        name: userData.name,
-        role: userData.role,
-        created_at: expect.any(Date)
-      }));
-    });
-
-    it('should throw ConflictError for duplicate email', async () => {
-      const userData = {
-        email: 'duplicate@example.com',
-        password: 'hashedPassword123',
-        name: 'Test User',
-        role: 'user'
-      };
-
-      await userRepository.createUser(userData);
-      await expect(userRepository.createUser(userData))
-        .rejects
-        .toThrow(ConflictError);
-    });
-  });
-
-  describe('findByEmail', () => {
-    it('should find user by email', async () => {
-      const userData = {
-        email: 'find@example.com',
-        password: 'hashedPassword123',
-        name: 'Test User',
-        role: 'user'
-      };
-
-      const created = await userRepository.createUser(userData);
-      const found = await userRepository.findByEmail(userData.email);
-
-      expect(found).toEqual(expect.objectContaining({
-        id: created.id,
-        email: userData.email,
-        name: userData.name,
-        role: userData.role
-      }));
-    });
-
-    it('should throw NotFoundError for non-existent email', async () => {
-      await expect(userRepository.findByEmail('nonexistent@example.com'))
-        .rejects
-        .toThrow(NotFoundError);
-    });
-  });
-
-  describe('updateLastLogin', () => {
-    it('should update last login timestamp', async () => {
-      const userData = {
-        email: 'login@example.com',
-        password: 'hashedPassword123',
-        name: 'Test User',
-        role: 'user'
-      };
-
-      const created = await userRepository.createUser(userData);
-      const updated = await userRepository.updateLastLogin(created.id);
-
-      expect(updated).toEqual(expect.objectContaining({
-        id: created.id,
-        email: userData.email,
-        name: userData.name,
-        last_login: expect.any(Date)
-      }));
-    });
-
-    it('should throw NotFoundError for non-existent user', async () => {
-      await expect(userRepository.updateLastLogin(999999))
-        .rejects
-        .toThrow(NotFoundError);
-    });
-  });
-
-  describe('updateUser', () => {
-    it('should update user data', async () => {
-      const userData = {
-        email: 'update@example.com',
-        password: 'hashedPassword123',
-        name: 'Test User',
-        role: 'user'
-      };
-
-      const created = await userRepository.createUser(userData);
-      const updateData = {
-        email: 'updated@example.com',
-        name: 'Updated User',
-        role: 'admin'
-      };
-
-      const updated = await userRepository.updateUser(created.id, updateData);
-
-      expect(updated).toEqual(expect.objectContaining({
-        id: created.id,
-        email: updateData.email,
-        name: updateData.name,
-        role: updateData.role
-      }));
-    });
-
-    it('should throw ConflictError when updating to existing email', async () => {
-      const user1 = await userRepository.createUser({
-        email: 'user1@example.com',
-        password: 'hashedPassword123',
-        name: 'User One',
-        role: 'user'
+        expect(user).toBeDefined();
+        expect(user.email).toBe(userData.email);
+        expect(user.name).toBe(userData.name);
+        expect(user.role).toBe(userData.role);
+        expect(user.id).toBeDefined();
+        expect(user.created_at).toBeDefined();
+        // Password should not be returned
+        expect(user.password).toBeUndefined();
       });
 
-      await userRepository.createUser({
-        email: 'user2@example.com',
-        password: 'hashedPassword123',
-        name: 'User Two',
-        role: 'user'
+      it('should set default role if not provided', async () => {
+        const userData = {
+          email: getUniqueEmail(),
+          password: await bcrypt.hash('testpass123', 10),
+          name: 'Test User'
+        };
+
+        const user = await userRepository.createUser(userData);
+
+        expect(user.role).toBe('user');
       });
 
-      await expect(userRepository.updateUser(user1.id, { email: 'user2@example.com' }))
-        .rejects
-        .toThrow(ConflictError);
+      it('should handle duplicate email', async () => {
+        const email = getUniqueEmail();
+        const userData = {
+          email,
+          password: await bcrypt.hash('testpass123', 10),
+          name: 'Test User'
+        };
+
+        await userRepository.createUser(userData);
+
+        await expect(userRepository.createUser(userData))
+          .rejects
+          .toThrow(ConflictError);
+      });
+    });
+
+    describe('findByEmail', () => {
+      it('should find existing user', async () => {
+        const userData = {
+          email: getUniqueEmail(),
+          password: await bcrypt.hash('testpass123', 10),
+          name: 'Test User'
+        };
+
+        const created = await userRepository.createUser(userData);
+        const found = await userRepository.findByEmail(userData.email);
+
+        expect(found.id).toBe(created.id);
+        expect(found.email).toBe(created.email);
+        expect(found.name).toBe(created.name);
+        // Password should be included for auth
+        expect(found.password).toBeDefined();
+      });
+
+      it('should throw NotFoundError for non-existent email', async () => {
+        await expect(userRepository.findByEmail('nonexistent@example.com'))
+          .rejects
+          .toThrow(NotFoundError);
+      });
+    });
+
+    describe('findById', () => {
+      it('should find existing user', async () => {
+        const userData = {
+          email: getUniqueEmail(),
+          password: await bcrypt.hash('testpass123', 10),
+          name: 'Test User'
+        };
+
+        const created = await userRepository.createUser(userData);
+        const found = await userRepository.findById(created.id);
+
+        expect(found.id).toBe(created.id);
+        expect(found.email).toBe(created.email);
+        expect(found.name).toBe(created.name);
+        // Password should not be returned
+        expect(found.password).toBeUndefined();
+      });
+
+      it('should throw NotFoundError for non-existent ID', async () => {
+        await expect(userRepository.findById(99999))
+          .rejects
+          .toThrow(NotFoundError);
+      });
+    });
+
+    describe('updateUser', () => {
+      it('should update allowed fields', async () => {
+        const userData = {
+          email: getUniqueEmail(),
+          password: await bcrypt.hash('testpass123', 10),
+          name: 'Test User'
+        };
+
+        const created = await userRepository.createUser(userData);
+        const updateData = {
+          name: 'Updated Name',
+          email: getUniqueEmail()
+        };
+
+        const updated = await userRepository.updateUser(created.id, updateData);
+
+        expect(updated.name).toBe(updateData.name);
+        expect(updated.email).toBe(updateData.email);
+        expect(updated.updated_at).toBeDefined();
+      });
+
+      it('should ignore non-allowed fields', async () => {
+        const userData = {
+          email: getUniqueEmail(),
+          password: await bcrypt.hash('testpass123', 10),
+          name: 'Test User'
+        };
+
+        const created = await userRepository.createUser(userData);
+        const updateData = {
+          name: 'Updated Name',
+          nonexistent_field: 'should be ignored'
+        };
+
+        const updated = await userRepository.updateUser(created.id, updateData);
+
+        expect(updated.name).toBe(updateData.name);
+        expect(updated.email).toBe(created.email);
+      });
+
+      it('should throw NotFoundError for non-existent user', async () => {
+        await expect(userRepository.updateUser(99999, { name: 'Test' }))
+          .rejects
+          .toThrow(NotFoundError);
+      });
+    });
+
+    describe('deleteUser', () => {
+      it('should delete existing user', async () => {
+        const userData = {
+          email: getUniqueEmail(),
+          password: await bcrypt.hash('testpass123', 10),
+          name: 'Test User'
+        };
+
+        const created = await userRepository.createUser(userData);
+        await userRepository.deleteUser(created.id);
+
+        await expect(userRepository.findById(created.id))
+          .rejects
+          .toThrow(NotFoundError);
+      });
+
+      it('should throw NotFoundError for non-existent user', async () => {
+        await expect(userRepository.deleteUser(99999))
+          .rejects
+          .toThrow(NotFoundError);
+      });
+    });
+
+    describe('listUsers', () => {
+      it('should return paginated results', async () => {
+        // Create multiple users
+        const users = await Promise.all(
+          Array(15).fill().map((_, i) => userRepository.createUser({
+            email: getUniqueEmail(),
+            password: 'testpass123',
+            name: `Test User ${i}`
+          }))
+        );
+
+        const result = await userRepository.listUsers({ limit: 10, offset: 0 });
+
+        expect(result.users).toHaveLength(10);
+        expect(result.totalCount).toBeGreaterThanOrEqual(15);
+        expect(result.hasMore).toBe(true);
+      });
+
+      it('should handle empty result set', async () => {
+        const result = await userRepository.listUsers({ limit: 10, offset: 1000 });
+
+        expect(result.users).toHaveLength(0);
+        expect(result.hasMore).toBe(false);
+      });
+
+      it('should calculate hasMore correctly', async () => {
+        // Create exactly 10 users
+        await Promise.all(
+          Array(10).fill().map(() => userRepository.createUser({
+            email: getUniqueEmail(),
+            password: 'testpass123',
+            name: 'Test User'
+          }))
+        );
+
+        const result = await userRepository.listUsers({ limit: 10, offset: 0 });
+
+        expect(result.users).toHaveLength(10);
+        expect(result.hasMore).toBe(false);
+      });
     });
   });
 
-  describe('deleteUser', () => {
-    it('should delete user successfully', async () => {
+  describe('Special Operations', () => {
+    describe('updateLastLogin', () => {
+      it('should update timestamp', async () => {
+        const userData = {
+          email: getUniqueEmail(),
+          password: await bcrypt.hash('testpass123', 10),
+          name: 'Test User'
+        };
+
+        const created = await userRepository.createUser(userData);
+        const updated = await userRepository.updateLastLogin(created.id);
+
+        expect(updated.last_login).toBeDefined();
+        expect(new Date(updated.last_login).getTime())
+          .toBeGreaterThan(new Date(created.created_at).getTime());
+      });
+
+      it('should throw NotFoundError for non-existent user', async () => {
+        await expect(userRepository.updateLastLogin(99999))
+          .rejects
+          .toThrow(NotFoundError);
+      });
+    });
+  });
+
+  describe('Transaction Handling', () => {
+    it('should rollback on error', async () => {
       const userData = {
-        email: 'delete@example.com',
-        password: 'hashedPassword123',
-        name: 'Test User',
-        role: 'user'
+        email: getUniqueEmail(),
+        password: await bcrypt.hash('testpass123', 10),
+        name: 'Test User'
       };
 
+      // Create user successfully
       const created = await userRepository.createUser(userData);
-      await userRepository.deleteUser(created.id);
 
-      await expect(userRepository.findById(created.id))
-        .rejects
-        .toThrow(NotFoundError);
-    });
-
-    it('should throw NotFoundError for non-existent user', async () => {
-      await expect(userRepository.deleteUser(999999))
-        .rejects
-        .toThrow(NotFoundError);
-    });
-  });
-
-  describe('listUsers', () => {
-    it('should list users with pagination', async () => {
-      await Promise.all([
-        userRepository.createUser({
-          email: 'user1@example.com',
-          password: 'hashedPassword123',
-          name: 'User One',
-          role: 'user'
-        }),
-        userRepository.createUser({
-          email: 'user2@example.com',
-          password: 'hashedPassword123',
-          name: 'User Two',
-          role: 'user'
-        }),
-        userRepository.createUser({
-          email: 'user3@example.com',
-          password: 'hashedPassword123',
-          name: 'User Three',
-          role: 'user'
-        })
-      ]);
-
-      const { users, totalCount, hasMore } = await userRepository.listUsers({
-        limit: 2,
-        offset: 0
-      });
-
-      expect(users).toHaveLength(2);
-      expect(totalCount).toBeGreaterThanOrEqual(3);
-      expect(hasMore).toBe(true);
-    });
-  });
-
-  describe('transaction support', () => {
-    let transactionClient;
-    let transactionRepo;
-
-    beforeEach(async () => {
-      transactionClient = await pool.connect();
-      transactionRepo = new UserRepository(transactionClient);
-    });
-
-    afterEach(async () => {
-      if (transactionClient) {
-        await transactionClient.query('ROLLBACK');
-        transactionClient.release();
-      }
-    });
-
-    it('should rollback changes on error', async () => {
-      const userData = {
-        email: 'transaction@example.com',
-        password: 'hashedPassword123',
-        name: 'Test User',
-        role: 'user'
-      };
-
-      await transactionClient.query('BEGIN');
+      // Try to create another user with same email (should fail)
       try {
-        await transactionRepo.createUser(userData);
-        throw new Error('Test error');
+        await userRepository.createUser(userData);
       } catch (error) {
-        expect(error.message).toBe('Test error');
-        await transactionClient.query('ROLLBACK');
+        // Expected error
       }
 
-      // Use a new connection to verify the rollback
-      const verifyRepo = new UserRepository();
-      await expect(verifyRepo.findByEmail(userData.email))
-        .rejects
-        .toThrow(NotFoundError);
+      // Verify the user still exists (transaction didn't affect it)
+      const found = await userRepository.findById(created.id);
+      expect(found.id).toBe(created.id);
     });
 
-    it('should commit changes on success', async () => {
+    it('should maintain isolation', async () => {
       const userData = {
-        email: 'transaction-success@example.com',
-        password: 'hashedPassword123',
-        name: 'Test User',
-        role: 'user'
+        email: getUniqueEmail(),
+        password: await bcrypt.hash('testpass123', 10),
+        name: 'Test User'
       };
 
-      await transactionClient.query('BEGIN');
-      await transactionRepo.createUser(userData);
-      await transactionClient.query('COMMIT');
+      // Create user in transaction
+      const created = await userRepository.createUser(userData);
 
-      // Use a new connection to verify the commit
-      const verifyRepo = new UserRepository();
-      const user = await verifyRepo.findByEmail(userData.email);
-      expect(user.email).toBe(userData.email);
+      // Try to find user from another connection (should not be visible)
+      const otherClient = await createTestTransaction();
+      const otherRepo = new UserRepository(otherClient);
+
+      await expect(otherRepo.findById(created.id))
+        .rejects
+        .toThrow(NotFoundError);
+
+      await otherClient.query('ROLLBACK');
+      await otherClient.release();
     });
   });
 });

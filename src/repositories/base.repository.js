@@ -1,8 +1,10 @@
 import pool from '../config/database.js';
-import { DatabaseError, ConflictError } from '../errors/index.js';
+import { DatabaseError } from '../errors/index.js';
+import { metrics } from '../utils/metrics.js';
+import { logger } from '../utils/logger.js';
 
 /**
- * Base repository class providing common database operations and transaction management
+ * Base repository class with common database operations
  */
 export class BaseRepository {
   constructor(tableName) {
@@ -11,84 +13,196 @@ export class BaseRepository {
   }
 
   /**
-   * Execute a database query with performance monitoring
-   * @param {string} query - SQL query to execute
-   * @param {Array} params - Query parameters
-   * @param {pg.PoolClient} [client] - Optional database client for transaction support
-   * @returns {Promise<any>} Query result
+   * Initialize schema for this repository
+   * @returns {Promise<void>}
    */
-  async executeQuery(query, params = [], client = this.client) {
-    const queryStart = process.hrtime();
+  async initializeSchema() {
+    const schemaSQL = this.getSchemaSQL();
+    if (!schemaSQL) {
+      logger.warn('No schema SQL defined', {
+        context: {
+          repository: this.constructor.name,
+          table: this.tableName
+        }
+      });
+      return;
+    }
+
+    logger.info('Initializing schema', {
+      context: {
+        repository: this.constructor.name,
+        table: this.tableName
+      }
+    });
+
     try {
-      const result = await (client || pool).query(query, params);
-      this._logQueryPerformance(query, params, queryStart);
+      await this.executeQuery(schemaSQL);
+      
+      // Initialize any indexes or triggers
+      const additionalSQL = this.getAdditionalSchemaSQL();
+      if (additionalSQL) {
+        await this.executeQuery(additionalSQL);
+      }
+
+      logger.info('Schema initialized successfully', {
+        context: {
+          repository: this.constructor.name,
+          table: this.tableName
+        }
+      });
+    } catch (error) {
+      logger.error('Failed to initialize schema', {
+        error,
+        context: {
+          repository: this.constructor.name,
+          table: this.tableName
+        }
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Drop schema for this repository
+   * @returns {Promise<void>}
+   */
+  async dropSchema() {
+    logger.info('Dropping schema', {
+      context: {
+        repository: this.constructor.name,
+        table: this.tableName
+      }
+    });
+
+    try {
+      await this.executeQuery(`DROP TABLE IF EXISTS ${this.tableName} CASCADE`);
+
+      logger.info('Schema dropped successfully', {
+        context: {
+          repository: this.constructor.name,
+          table: this.tableName
+        }
+      });
+    } catch (error) {
+      logger.error('Failed to drop schema', {
+        error,
+        context: {
+          repository: this.constructor.name,
+          table: this.tableName
+        }
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get SQL for creating table and constraints
+   * @returns {string|null} SQL string or null if not implemented
+   */
+  getSchemaSQL() {
+    return null;
+  }
+
+  /**
+   * Get additional SQL for indexes, triggers, etc.
+   * @returns {string|null} SQL string or null if not needed
+   */
+  getAdditionalSchemaSQL() {
+    return null;
+  }
+
+  /**
+   * Execute a query with proper error handling and metrics
+   * @param {string} sql SQL query
+   * @param {Array} params Query parameters
+   * @returns {Promise<import('pg').QueryResult>} Query result
+   */
+  async executeQuery(sql, params = []) {
+    const startTime = process.hrtime();
+    const client = this.client || pool;
+
+    try {
+      const result = await client.query(sql, params);
+      const duration = this._getDurationMs(startTime);
+
+      metrics.observe('query_duration', {
+        value: duration,
+        operation: this._getOperationType(sql),
+        status: 'success'
+      });
+
+      metrics.observe('query_count', {
+        status: 'success'
+      });
+
       return result;
     } catch (error) {
-      // Preserve original error for transaction rollback
-      if (error instanceof Error && error.message === 'Test error') {
-        throw error;
-      }
-      
-      // Handle specific database errors
-      if (error.code === '23505') { // Unique violation
-        throw new ConflictError('Duplicate value violates unique constraint');
-      }
-      if (error.code === '42P01') { // Undefined table
-        throw new DatabaseError(`Table ${this.tableName} does not exist`, error);
-      }
-      
-      // Log the original error for debugging
-      console.error('Database error:', {
-        code: error.code,
-        message: error.message,
-        query,
-        params
+      const duration = this._getDurationMs(startTime);
+
+      metrics.observe('query_duration', {
+        value: duration,
+        operation: this._getOperationType(sql),
+        status: 'error'
       });
-      
-      throw new DatabaseError('Query execution failed', error);
+
+      metrics.observe('query_count', {
+        status: 'error'
+      });
+
+      throw new DatabaseError(error.message, {
+        cause: error,
+        context: {
+          sql,
+          params,
+          duration,
+          table: this.tableName
+        }
+      });
     }
   }
 
   /**
    * Execute operations within a transaction
-   * @param {Function} callback - Operations to execute within transaction
-   * @returns {Promise<any>} Result of the callback
+   * @param {Function} operations Function containing operations to execute
+   * @returns {Promise<any>} Result of operations
    */
-  async withTransaction(callback) {
+  async withTransaction(operations) {
     const client = await pool.connect();
+    this.client = client;
+
     try {
       await client.query('BEGIN');
-      const result = await callback();
+      const result = await operations();
       await client.query('COMMIT');
       return result;
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
     } finally {
+      this.client = null;
       client.release();
     }
   }
 
   /**
-   * Log query performance metrics
-   * @param {string} query - Executed query
-   * @param {Array} params - Query parameters
-   * @param {[number, number]} startTime - Query start time
-   * @param {number} [threshold=200] - Slow query threshold in milliseconds
-   * @private
+   * Get duration in milliseconds
+   * @param {[number, number]} startTime Start time from process.hrtime()
+   * @returns {number} Duration in milliseconds
    */
-  _logQueryPerformance(query, params, startTime, threshold = 200) {
+  _getDurationMs(startTime) {
     const [seconds, nanoseconds] = process.hrtime(startTime);
-    const duration = seconds * 1000 + nanoseconds / 1e6;
-    
-    if (duration > threshold) {
-      console.warn('Slow query detected:', {
-        duration: `${duration.toFixed(2)}ms`,
-        query,
-        params,
-        table: this.tableName,
-        timestamp: new Date().toISOString()
-      });
-    }
+    return seconds * 1000 + nanoseconds / 1000000;
+  }
+
+  /**
+   * Get operation type from SQL query
+   * @param {string} sql SQL query
+   * @returns {string} Operation type (SELECT, INSERT, UPDATE, DELETE)
+   */
+  _getOperationType(sql) {
+    const firstWord = sql.trim().split(' ')[0].toUpperCase();
+    return ['SELECT', 'INSERT', 'UPDATE', 'DELETE'].includes(firstWord)
+      ? firstWord
+      : 'OTHER';
   }
 }

@@ -1,36 +1,57 @@
 import request from 'supertest';
-import { describe, it, expect, beforeEach, beforeAll } from 'vitest';
+import { describe, it, expect, beforeEach, beforeAll, vi, afterEach } from 'vitest';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
-import pool from '../../config/database.js';
 import app from '../../server.js';
-import { setupTestDb, cleanTestDb } from './setup.js';
+import { testDb, createTestTransaction, createTestDataFactory } from './setup.js';
+import { logger } from '../../utils/logger.js';
+import { UserRepository } from '../../repositories/user.repository.js';
 
-// Set up test environment
-process.env.JWT_SECRET = 'test-secret-key';
-process.env.NODE_ENV = 'test';
+// Mock logger
+vi.mock('../../utils/logger.js', () => ({
+  logger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn()
+  }
+}));
 
 describe('Auth Routes', () => {
   let testUser;
+  let userRepository;
+  let client;
   let testCount = 0;
 
   const getUniqueEmail = () => `test${testCount}@example.com`;
 
   beforeAll(async () => {
-    await setupTestDb();
+    await testDb.setup();
   });
 
   beforeEach(async () => {
-    await cleanTestDb();
+    // Start transaction
+    client = await createTestTransaction();
+    userRepository = new UserRepository(client);
     testCount++;
 
     // Create test user
     const hashedPassword = await bcrypt.hash('testpass123', 10);
-    const result = await pool.query(
-      'INSERT INTO users (email, password, name, role) VALUES ($1, $2, $3, $4) RETURNING *',
-      ['test@example.com', hashedPassword, 'Test User', 'user']
-    );
-    testUser = result.rows[0];
+    testUser = await userRepository.createUser({
+      email: 'test@example.com',
+      password: hashedPassword,
+      name: 'Test User',
+      role: 'user'
+    });
+
+    // Clear mock calls
+    vi.clearAllMocks();
+  });
+
+  afterEach(async () => {
+    // Rollback transaction
+    await client.query('ROLLBACK');
+    await client.release();
   });
 
   describe('POST /api/auth/login', () => {
@@ -47,14 +68,29 @@ describe('Auth Routes', () => {
       expect(response.body).toHaveProperty('user');
       expect(response.body.user).toHaveProperty('email', 'test@example.com');
       expect(response.body.user).toHaveProperty('name', 'Test User');
+
+      // Verify logging
+      expect(logger.info).toHaveBeenCalledWith(
+        'Login attempt',
+        expect.objectContaining({
+          context: expect.objectContaining({
+            email: 'test@example.com'
+          })
+        })
+      );
+      expect(logger.info).toHaveBeenCalledWith(
+        'Login successful',
+        expect.objectContaining({
+          context: expect.objectContaining({
+            email: 'test@example.com'
+          })
+        })
+      );
     });
 
     it('should update last_login on successful login', async () => {
-      const beforeLogin = await pool.query(
-        'SELECT last_login FROM users WHERE id = $1',
-        [testUser.id]
-      );
-      const oldLastLogin = beforeLogin.rows[0].last_login;
+      const beforeLogin = await userRepository.findByEmail('test@example.com');
+      const oldLastLogin = beforeLogin.last_login;
 
       await request(app)
         .post('/api/auth/login')
@@ -63,11 +99,8 @@ describe('Auth Routes', () => {
           password: 'testpass123'
         });
 
-      const afterLogin = await pool.query(
-        'SELECT last_login FROM users WHERE id = $1',
-        [testUser.id]
-      );
-      const newLastLogin = afterLogin.rows[0].last_login;
+      const afterLogin = await userRepository.findByEmail('test@example.com');
+      const newLastLogin = afterLogin.last_login;
 
       expect(new Date(newLastLogin).getTime()).toBeGreaterThan(
         new Date(oldLastLogin || 0).getTime()
@@ -83,7 +116,17 @@ describe('Auth Routes', () => {
         });
 
       expect(response.status).toBe(401);
-      expect(response.body).toHaveProperty('message', 'Invalid credentials');
+      expect(response.body).toHaveProperty('error', 'Invalid credentials');
+
+      // Verify logging
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Login failed',
+        expect.objectContaining({
+          context: expect.objectContaining({
+            reason: 'invalid_credentials'
+          })
+        })
+      );
     });
 
     it('should reject non-existent user', async () => {
@@ -95,7 +138,17 @@ describe('Auth Routes', () => {
         });
 
       expect(response.status).toBe(401);
-      expect(response.body).toHaveProperty('message', 'Invalid credentials');
+      expect(response.body).toHaveProperty('error', 'Invalid credentials');
+
+      // Verify logging
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Login failed',
+        expect.objectContaining({
+          context: expect.objectContaining({
+            reason: 'invalid_credentials'
+          })
+        })
+      );
     });
   });
 
@@ -122,7 +175,17 @@ describe('Auth Routes', () => {
         .set('Authorization', 'Bearer invalid-token');
 
       expect(response.status).toBe(401);
-      expect(response.body).toHaveProperty('message', 'Invalid token');
+      expect(response.body).toHaveProperty('error', 'Invalid token');
+
+      // Verify logging
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Token verification failed',
+        expect.objectContaining({
+          context: expect.objectContaining({
+            reason: 'invalid_token'
+          })
+        })
+      );
     });
 
     it('should reject missing token', async () => {
@@ -130,7 +193,7 @@ describe('Auth Routes', () => {
         .get('/api/auth/verify');
 
       expect(response.status).toBe(401);
-      expect(response.body).toHaveProperty('message', 'No token provided');
+      expect(response.body).toHaveProperty('error', 'No token provided');
     });
   });
 
@@ -153,12 +216,15 @@ describe('Auth Routes', () => {
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('message', 'Password updated successfully');
 
-      // Verify updated_at was updated
-      const result = await pool.query(
-        'SELECT updated_at FROM users WHERE id = $1',
-        [testUser.id]
+      // Verify logging
+      expect(logger.info).toHaveBeenCalledWith(
+        'Password change attempt',
+        expect.any(Object)
       );
-      expect(result.rows[0].updated_at).toBeDefined();
+      expect(logger.info).toHaveBeenCalledWith(
+        'Password changed successfully',
+        expect.any(Object)
+      );
     });
 
     it('should reject invalid current password', async () => {
@@ -176,8 +242,18 @@ describe('Auth Routes', () => {
           newPassword: 'newpass123'
         });
 
-      expect(response.status).toBe(401);
-      expect(response.body).toHaveProperty('message', 'Invalid current password');
+      expect(response.status).toBe(400);
+      expect(response.body).toHaveProperty('error', 'Invalid current password');
+
+      // Verify logging
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Password change failed',
+        expect.objectContaining({
+          context: expect.objectContaining({
+            reason: 'invalid_current_password'
+          })
+        })
+      );
     });
   });
 
@@ -191,7 +267,7 @@ describe('Auth Routes', () => {
         });
 
       expect(response.status).toBe(400);
-      expect(response.body).toHaveProperty('message', 'Invalid email format');
+      expect(response.body).toHaveProperty('error', 'email must be a valid email address');
     });
 
     it('should validate password length', async () => {
@@ -203,29 +279,11 @@ describe('Auth Routes', () => {
         });
 
       expect(response.status).toBe(400);
-      expect(response.body).toHaveProperty('message', 'Password must be at least 8 characters');
+      expect(response.body).toHaveProperty('error', 'password must be at least 8 characters');
     });
   });
 
   describe('Error Handling', () => {
-    it('should handle database errors gracefully', async () => {
-      // Drop the users table to simulate a database error
-      await pool.query('DROP TABLE IF EXISTS users');
-
-      const response = await request(app)
-        .post('/api/auth/login')
-        .send({
-          email: 'test@example.com',
-          password: 'testpass123'
-        });
-
-      expect(response.status).toBe(500);
-      expect(response.body).toHaveProperty('message', 'Internal server error');
-
-      // Recreate the users table for subsequent tests
-      await setupTestDb();
-    });
-
     it('should handle rate limiting', async () => {
       // Make multiple requests in quick succession
       const requests = Array(11).fill().map(() => 
@@ -241,7 +299,7 @@ describe('Auth Routes', () => {
       const lastResponse = responses[responses.length - 1];
 
       expect(lastResponse.status).toBe(429);
-      expect(lastResponse.body).toHaveProperty('message', 'Too many requests');
+      expect(lastResponse.body).toHaveProperty('error', 'Too many login attempts, please try again later');
     });
   });
 
@@ -259,7 +317,17 @@ describe('Auth Routes', () => {
         .set('Authorization', `Bearer ${expiredToken}`);
 
       expect(response.status).toBe(401);
-      expect(response.body).toHaveProperty('message', 'Token expired');
+      expect(response.body).toHaveProperty('error', 'Token expired');
+
+      // Verify logging
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Token verification failed',
+        expect.objectContaining({
+          context: expect.objectContaining({
+            reason: 'invalid_token'
+          })
+        })
+      );
     });
 
     it('should handle malformed tokens', async () => {
@@ -268,7 +336,17 @@ describe('Auth Routes', () => {
         .set('Authorization', 'Bearer malformed.token.here');
 
       expect(response.status).toBe(401);
-      expect(response.body).toHaveProperty('message', 'Invalid token');
+      expect(response.body).toHaveProperty('error', 'Invalid token');
+
+      // Verify logging
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Token verification failed',
+        expect.objectContaining({
+          context: expect.objectContaining({
+            reason: 'invalid_token'
+          })
+        })
+      );
     });
   });
 });

@@ -1,53 +1,135 @@
-# Active Context
+# Active Context: Database & Service Implementation
 
-## Current Task
-Completed authentication API tests and setup:
-1. API endpoint tests for auth routes ✓
-2. Test environment configuration ✓
-3. Rate limiting implementation ✓
-4. Database integration tests ✓
+## Current Status (as of 2/11/2025)
 
-## Recent Changes
-- Converted all auth-related code to ES modules
-- Implemented proper test database setup
-- Added rate limiting with test configuration
-- Fixed all auth API tests (15 passing tests)
+### Architectural Decision: Repository-Based Schema Management ✓
+- Schema management moved to repositories
+- Each repository manages its own schema
+- Clean encapsulation maintained
+- Proper transaction handling
 
-## Next Steps
-1. Frontend Tests
-   - Complete auth context tests in client/src/contexts/__tests__/
-   - Add tests for auth utilities
-   - Implement proper mocking strategies
+### Current Focus: Auth Test Infrastructure
 
-2. Integration Tests
-   - Test frontend-backend auth integration
-   - Verify token handling in client
-   - Test error handling and user feedback
+#### Immediate Priority: Test Fixes
+1. TestDatabaseManager Updates
+   - Fix schema initialization
+   - Improve transaction handling
+   - Add better error handling
+   - Update cleanup procedures
 
-3. UI Implementation
-   - Add loading states for auth actions
-   - Implement error messages
-   - Add success notifications
+2. Test Data Management
+   - Fix user creation utilities
+   - Add transaction support
+   - Improve error handling
+   - Update cleanup procedures
 
-## Technical Details
-Testing Strategy:
-1. Unit Tests:
-   - Focus on isolated functionality
-   - Mock external dependencies
-   - Test edge cases and error handling
+3. Auth Test Suite
+   - Update test initialization
+   - Fix transaction boundaries
+   - Improve error testing
+   - Verify logging
 
-2. Integration Tests:
-   - Test frontend-backend communication
-   - Verify token management
-   - Test error scenarios
+#### Implementation Steps
+1. Day 1: Infrastructure
+   - Update TestDatabaseManager
+   - Fix test data factories
+   - Improve cleanup
 
-3. UI Tests:
-   - Test user interactions
-   - Verify form validation
-   - Test loading and error states
+2. Day 2: Test Fixes
+   - Fix auth service tests
+   - Update repository tests
+   - Fix route tests
 
-Test Environment:
-- Uses .env.test configuration
-- Separate test database
-- MCP PostgreSQL server for test data management
-- Rate limiting configured for test environment
+#### Success Criteria
+- All auth tests passing
+- Clean transaction handling
+- Proper error handling
+- Complete logging
+
+### Completed Work
+
+#### Phase 1-4 ✓
+- Infrastructure Setup
+- Repository Implementation
+- Service Layer Updates
+- Route Layer Updates
+
+#### Phase 5 (Partial) ✓
+1. Base Infrastructure
+   - Schema management in BaseRepository
+   - Transaction support
+   - Error handling
+   - Logging integration
+
+2. Auth Implementation
+   - UserRepository schema management
+   - AuthService initialization
+   - Initial test implementation
+   - Complete logging
+
+### Upcoming Work
+
+#### After Auth Tests
+1. Core Repository Migration
+   - EmployeeRepository schema
+   - ProjectRepository schema
+   - RequirementRepository schema
+   - AssignmentRepository schema
+
+2. Test Infrastructure
+   - Apply patterns to other tests
+   - Improve documentation
+   - Add monitoring
+   - Regular reviews
+
+## Implementation Guidelines
+
+### 1. Test Infrastructure
+- Clean schema initialization
+- Proper transaction handling
+- Clear error messages
+- Reliable cleanup
+
+### 2. Test Data Management
+- Reliable data creation
+- Transaction support
+- Error handling
+- Clean state after tests
+
+### 3. Error Handling
+- Clear error messages
+- Proper logging
+- Transaction rollback
+- State verification
+
+### 4. Monitoring
+- Test execution time
+- Resource usage
+- Error rates
+- Success metrics
+
+## Success Criteria
+
+### 1. Test Quality
+- All tests passing
+- Clean transactions
+- Proper isolation
+- Complete logging
+
+### 2. Code Quality
+- Clean architecture
+- Proper encapsulation
+- Error handling
+- Documentation
+
+### 3. Maintenance
+- Easy debugging
+- Clear patterns
+- Quick fixes
+- Regular reviews
+
+## Next Actions
+1. Switch to Code mode
+2. Update TestDatabaseManager
+3. Fix test data factories
+4. Get auth tests passing

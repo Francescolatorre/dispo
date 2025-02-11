@@ -1,233 +1,314 @@
-import pool from '../config/database.js';
+import { RequirementRepository } from '../repositories/requirement.repository.js';
+import { ProjectRepository } from '../repositories/project.repository.js';
+import { logger } from '../utils/logger.js';
+import { ValidationError, NotFoundError } from '../errors/index.js';
 
-class RequirementService {
+export class RequirementService {
+  constructor(
+    requirementRepository = new RequirementRepository(),
+    projectRepository = new ProjectRepository()
+  ) {
+    this.requirementRepository = requirementRepository;
+    this.projectRepository = projectRepository;
+  }
+
   /**
    * Create a new project requirement
+   * @param {Object} requirementData Requirement data
+   * @returns {Promise<Object>} Created requirement
    */
-  async createRequirement(data) {
-    const {
-      project_id,
-      role,
-      seniority_level,
-      required_qualifications,
-      start_date,
-      end_date,
-      priority,
-      notes
-    } = data;
+  async createRequirement(requirementData) {
+    logger.info('Creating new requirement', {
+      context: {
+        projectId: requirementData.project_id,
+        role: requirementData.role,
+        service: 'RequirementService',
+        operation: 'createRequirement'
+      }
+    });
 
-    const result = await pool.query(
-      `INSERT INTO project_requirements (
-        project_id,
-        role,
-        seniority_level,
-        required_qualifications,
-        start_date,
-        end_date,
-        priority,
-        notes
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      RETURNING *`,
-      [
-        project_id,
-        role,
-        seniority_level,
-        required_qualifications || [],
-        start_date,
-        end_date,
-        priority || 'medium',
-        notes
-      ]
-    );
+    try {
+      // Verify project exists
+      await this.projectRepository.findById(requirementData.project_id);
 
-    return result.rows[0];
+      return await this.requirementRepository.withTransaction(async () => {
+        const requirement = await this.requirementRepository.createRequirement(requirementData);
+
+        logger.info('Requirement created successfully', {
+          context: {
+            requirementId: requirement.id,
+            projectId: requirement.project_id,
+            role: requirement.role
+          }
+        });
+
+        return requirement;
+      });
+    } catch (error) {
+      logger.error('Failed to create requirement', {
+        error,
+        context: {
+          projectId: requirementData.project_id,
+          role: requirementData.role,
+          service: 'RequirementService',
+          operation: 'createRequirement'
+        }
+      });
+      throw error;
+    }
   }
 
   /**
-   * Get requirement by ID with related data
+   * Get requirement by ID
+   * @param {string} id Requirement ID
+   * @returns {Promise<Object>} Requirement object
    */
   async getRequirementById(id) {
-    const result = await pool.query(
-      `SELECT r.*, 
-              p.name as project_name,
-              a.id as current_assignment_id,
-              a.employee_id as current_employee_id,
-              e.name as current_employee_name
-       FROM project_requirements r
-       LEFT JOIN projects p ON r.project_id = p.id
-       LEFT JOIN project_assignments a ON 
-         a.requirement_id = r.id AND 
-         a.status = 'active' AND
-         CURRENT_DATE BETWEEN a.start_date AND a.end_date
-       LEFT JOIN employees e ON a.employee_id = e.id
-       WHERE r.id = $1`,
-      [id]
-    );
+    logger.info('Fetching requirement by ID', {
+      context: {
+        requirementId: id,
+        service: 'RequirementService',
+        operation: 'getRequirementById'
+      }
+    });
 
-    return result.rows[0];
+    try {
+      const requirement = await this.requirementRepository.findById(id);
+
+      logger.debug('Requirement found', {
+        context: {
+          requirementId: id,
+          projectId: requirement.project_id
+        }
+      });
+
+      return requirement;
+    } catch (error) {
+      logger.error('Failed to fetch requirement', {
+        error,
+        context: {
+          requirementId: id,
+          service: 'RequirementService',
+          operation: 'getRequirementById'
+        }
+      });
+      throw error;
+    }
   }
 
   /**
-   * Get requirements for a project
+   * List requirements with filters
+   * @param {Object} options Query options
+   * @returns {Promise<{requirements: Array, totalCount: number, hasMore: boolean}>}
    */
-  async getProjectRequirements(projectId) {
-    const result = await pool.query(
-      `SELECT r.*, 
-              a.id as current_assignment_id,
-              a.employee_id as current_employee_id,
-              e.name as current_employee_name
-       FROM project_requirements r
-       LEFT JOIN project_assignments a ON 
-         a.requirement_id = r.id AND 
-         a.status = 'active' AND
-         CURRENT_DATE BETWEEN a.start_date AND a.end_date
-       LEFT JOIN employees e ON a.employee_id = e.id
-       WHERE r.project_id = $1
-       ORDER BY r.start_date`,
-      [projectId]
-    );
+  async listRequirements(options = {}) {
+    logger.info('Listing requirements', {
+      context: {
+        options,
+        service: 'RequirementService',
+        operation: 'listRequirements'
+      }
+    });
 
-    return result.rows;
+    try {
+      const result = await this.requirementRepository.listRequirements(options);
+
+      logger.debug('Requirements listed successfully', {
+        context: {
+          count: result.requirements.length,
+          totalCount: result.totalCount,
+          hasMore: result.hasMore,
+          filters: options
+        }
+      });
+
+      return result;
+    } catch (error) {
+      logger.error('Failed to list requirements', {
+        error,
+        context: {
+          options,
+          service: 'RequirementService',
+          operation: 'listRequirements'
+        }
+      });
+      throw error;
+    }
   }
 
   /**
-   * Update a requirement
+   * Update requirement
+   * @param {string} id Requirement ID
+   * @param {Object} updateData Update data
+   * @returns {Promise<Object>} Updated requirement
    */
-  async updateRequirement(id, data) {
-    const {
-      role,
-      seniority_level,
-      required_qualifications,
-      start_date,
-      end_date,
-      status,
-      priority,
-      notes
-    } = data;
+  async updateRequirement(id, updateData) {
+    logger.info('Updating requirement', {
+      context: {
+        requirementId: id,
+        updateFields: Object.keys(updateData),
+        service: 'RequirementService',
+        operation: 'updateRequirement'
+      }
+    });
 
-    const result = await pool.query(
-      `UPDATE project_requirements
-       SET role = COALESCE($1, role),
-           seniority_level = COALESCE($2, seniority_level),
-           required_qualifications = COALESCE($3, required_qualifications),
-           start_date = COALESCE($4, start_date),
-           end_date = COALESCE($5, end_date),
-           status = COALESCE($6, status),
-           priority = COALESCE($7, priority),
-           notes = COALESCE($8, notes),
-           updated_at = CURRENT_TIMESTAMP
-       WHERE id = $9
-       RETURNING *`,
-      [
-        role,
-        seniority_level,
-        required_qualifications,
-        start_date,
-        end_date,
-        status,
-        priority,
-        notes,
-        id
-      ]
-    );
+    try {
+      return await this.requirementRepository.withTransaction(async () => {
+        // Verify requirement exists
+        await this.requirementRepository.findById(id);
 
-    return result.rows[0];
+        const requirement = await this.requirementRepository.updateRequirement(id, updateData);
+
+        logger.info('Requirement updated successfully', {
+          context: {
+            requirementId: id,
+            projectId: requirement.project_id,
+            updatedFields: Object.keys(updateData)
+          }
+        });
+
+        return requirement;
+      });
+    } catch (error) {
+      logger.error('Failed to update requirement', {
+        error,
+        context: {
+          requirementId: id,
+          updateData,
+          service: 'RequirementService',
+          operation: 'updateRequirement'
+        }
+      });
+      throw error;
+    }
   }
 
   /**
-   * Delete a requirement
+   * Delete requirement
+   * @param {string} id Requirement ID
+   * @returns {Promise<void>}
    */
   async deleteRequirement(id) {
-    await pool.query(
-      'DELETE FROM project_requirements WHERE id = $1',
-      [id]
-    );
+    logger.info('Deleting requirement', {
+      context: {
+        requirementId: id,
+        service: 'RequirementService',
+        operation: 'deleteRequirement'
+      }
+    });
+
+    try {
+      await this.requirementRepository.withTransaction(async () => {
+        await this.requirementRepository.deleteRequirement(id);
+
+        logger.info('Requirement deleted successfully', {
+          context: {
+            requirementId: id
+          }
+        });
+      });
+    } catch (error) {
+      logger.error('Failed to delete requirement', {
+        error,
+        context: {
+          requirementId: id,
+          service: 'RequirementService',
+          operation: 'deleteRequirement'
+        }
+      });
+      throw error;
+    }
   }
 
   /**
-   * Get coverage gaps for a requirement
+   * Get project requirements
+   * @param {number} projectId Project ID
+   * @returns {Promise<Array>} List of requirements
    */
-  async getRequirementCoverage(id) {
-    const result = await pool.query(
-      `WITH requirement_period AS (
-        SELECT 
+  async getProjectRequirements(projectId) {
+    logger.info('Fetching project requirements', {
+      context: {
+        projectId,
+        service: 'RequirementService',
+        operation: 'getProjectRequirements'
+      }
+    });
+
+    try {
+      // Verify project exists
+      await this.projectRepository.findById(projectId);
+
+      const requirements = await this.requirementRepository.getProjectRequirements(projectId);
+
+      logger.debug('Project requirements fetched successfully', {
+        context: {
+          projectId,
+          requirementCount: requirements.length
+        }
+      });
+
+      return requirements;
+    } catch (error) {
+      logger.error('Failed to fetch project requirements', {
+        error,
+        context: {
+          projectId,
+          service: 'RequirementService',
+          operation: 'getProjectRequirements'
+        }
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Update requirement status
+   * @param {string} id Requirement ID
+   * @param {string} status New status
+   * @param {number} assignmentId Optional assignment ID
+   * @returns {Promise<Object>} Updated requirement
+   */
+  async updateRequirementStatus(id, status, assignmentId = null) {
+    logger.info('Updating requirement status', {
+      context: {
+        requirementId: id,
+        status,
+        assignmentId,
+        service: 'RequirementService',
+        operation: 'updateRequirementStatus'
+      }
+    });
+
+    try {
+      return await this.requirementRepository.withTransaction(async () => {
+        const requirement = await this.requirementRepository.updateRequirementStatus(
           id,
-          start_date as req_start,
-          end_date as req_end
-        FROM project_requirements
-        WHERE id = $1
-      ),
-      assignments AS (
-        SELECT 
-          start_date as assign_start,
-          end_date as assign_end
-        FROM project_assignments
-        WHERE requirement_id = $1
-        AND status = 'active'
-      )
-      SELECT 
-        req_start,
-        req_end,
-        ARRAY_AGG(
-          CASE 
-            WHEN assign_start IS NULL THEN jsonb_build_object(
-              'start', req_start,
-              'end', req_end,
-              'type', 'gap'
-            )
-            ELSE jsonb_build_object(
-              'start', assign_start,
-              'end', assign_end,
-              'type', 'covered'
-            )
-          END
-        ) as periods
-      FROM requirement_period
-      LEFT JOIN assignments ON true
-      GROUP BY req_start, req_end`,
-      [id]
-    );
+          status,
+          assignmentId
+        );
 
-    return result.rows[0];
-  }
+        logger.info('Requirement status updated successfully', {
+          context: {
+            requirementId: id,
+            status,
+            assignmentId
+          }
+        });
 
-  /**
-   * Find matching employees for a requirement
-   */
-  async findMatchingEmployees(requirementId) {
-    const result = await pool.query(
-      `WITH requirement AS (
-        SELECT 
-          seniority_level,
-          required_qualifications,
-          start_date,
-          end_date
-        FROM project_requirements
-        WHERE id = $1
-      )
-      SELECT 
-        e.*,
-        COUNT(pa.id) as current_assignments
-      FROM employees e
-      CROSS JOIN requirement r
-      LEFT JOIN project_assignments pa ON 
-        e.id = pa.employee_id AND
-        pa.status = 'active' AND
-        (pa.start_date, pa.end_date) OVERLAPS (r.start_date, r.end_date)
-      WHERE 
-        e.status = 'active' AND
-        e.seniority_level = r.seniority_level AND
-        e.qualifications && r.required_qualifications
-      GROUP BY e.id
-      ORDER BY 
-        current_assignments ASC,
-        e.seniority_level DESC`,
-      [requirementId]
-    );
-
-    return result.rows;
+        return requirement;
+      });
+    } catch (error) {
+      logger.error('Failed to update requirement status', {
+        error,
+        context: {
+          requirementId: id,
+          status,
+          assignmentId,
+          service: 'RequirementService',
+          operation: 'updateRequirementStatus'
+        }
+      });
+      throw error;
+    }
   }
 }
-
-const requirementService = new RequirementService();
-export default requirementService;
