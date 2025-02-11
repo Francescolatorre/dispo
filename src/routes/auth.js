@@ -3,8 +3,10 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import pool from '../config/database.js';
 import rateLimit from 'express-rate-limit';
+import { AuthService } from '../services/authService.js';
 
 const router = express.Router();
+const authService = new AuthService();
 
 // Rate limiting middleware - only enable in production
 const loginLimiter = rateLimit({
@@ -18,6 +20,10 @@ const loginLimiter = rateLimit({
 const validateLoginInput = (req, res, next) => {
   const { email, password } = req.body;
 
+  if (!email || !password) {
+    return res.status(400).json({ message: 'Email and password are required' });
+  }
+
   // Validate email format
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
@@ -25,7 +31,7 @@ const validateLoginInput = (req, res, next) => {
   }
 
   // Validate password length
-  if (!password || password.length < 8) {
+  if (password.length < 8) {
     return res.status(400).json({ message: 'Password must be at least 8 characters' });
   }
 
@@ -55,61 +61,18 @@ const verifyToken = async (req, res, next) => {
 
 // Login route
 router.post('/login', loginLimiter, validateLoginInput, async (req, res) => {
-  // Check database connection
-  try {
-    await pool.query('SELECT 1');
-  } catch (error) {
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-
   const { email, password } = req.body;
 
   try {
-    // Get user from database
-    const result = await pool.query(
-      'SELECT * FROM users WHERE email = $1',
-      [email]
-    );
-
-    const user = result.rows[0];
-
-    // Check if user exists
-    if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials' });
-    }
-
-    // Check password
-    const validPassword = await bcrypt.compare(password, user.password);
-    if (!validPassword) {
-      return res.status(401).json({ message: 'Invalid credentials' });
-    }
-
-    // Update last_login
-    await pool.query(
-      'UPDATE users SET last_login = NOW() WHERE id = $1',
-      [user.id]
-    );
-
-    // Create token
-    const token = jwt.sign(
-      { userId: user.id, email: user.email },
-      process.env.JWT_SECRET,
-      { expiresIn: '24h' }
-    );
-
-    // Send response
-    res.json({
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role
-      }
-    });
+    const result = await authService.login(email, password);
+    res.status(200).json(result);
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    if (error.message === 'Invalid credentials') {
+      res.status(401).json({ message: error.message });
+    } else {
+      console.error('Login error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
   }
 });
 
@@ -144,38 +107,29 @@ router.get('/verify', verifyToken, async (req, res) => {
 router.post('/change-password', verifyToken, async (req, res) => {
   const { currentPassword, newPassword } = req.body;
 
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ message: 'Current and new passwords are required' });
+  }
+
+  if (newPassword.length < 8) {
+    return res.status(400).json({ message: 'Password must be at least 8 characters' });
+  }
+
   try {
-    // Get user from database
-    const result = await pool.query(
-      'SELECT * FROM users WHERE id = $1',
-      [req.user.userId]
-    );
-
-    const user = result.rows[0];
-    if (!user) {
-      return res.status(401).json({ message: 'User not found' });
-    }
-
-    // Verify current password
-    const validPassword = await bcrypt.compare(currentPassword, user.password);
-    if (!validPassword) {
-      return res.status(401).json({ message: 'Invalid current password' });
-    }
-
-    // Hash new password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(newPassword, salt);
-
-    // Update password and updated_at timestamp
-    await pool.query(
-      'UPDATE users SET password = $1, updated_at = NOW() WHERE id = $2',
-      [hashedPassword, user.id]
-    );
-
-    res.json({ message: 'Password updated successfully' });
+    const result = await authService.changePassword(req.user.userId, currentPassword, newPassword);
+    res.json({ 
+      message: 'Password updated successfully',
+      updated_at: result.updated_at
+    });
   } catch (error) {
-    console.error('Change password error:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    if (error.message === 'User not found') {
+      res.status(401).json({ message: error.message });
+    } else if (error.message === 'Invalid current password') {
+      res.status(401).json({ message: error.message });
+    } else {
+      console.error('Change password error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
   }
 });
 

@@ -1,10 +1,15 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import pool from '../config/database.js';
+import { AuthorizationError, ValidationError } from '../errors/index.js';
+import { UserRepository } from '../repositories/user.repository.js';
 
 const SALT_ROUNDS = 10;
 
 export class AuthService {
+  constructor(userRepository = new UserRepository()) {
+    this.userRepository = userRepository;
+  }
+
   /**
    * Create a new user account
    * @param {string} email 
@@ -16,12 +21,14 @@ export class AuthService {
   async createUser(email, password, name, role = 'user') {
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
     
-    const result = await pool.query(
-      'INSERT INTO users (email, password, name, role) VALUES ($1, $2, $3, $4) RETURNING id, email, name, role',
-      [email, hashedPassword, name, role]
-    );
-    
-    return result.rows[0];
+    return await this.userRepository.withTransaction(async () => {
+      return await this.userRepository.createUser({
+        email,
+        password: hashedPassword,
+        name,
+        role
+      });
+    });
   }
 
   /**
@@ -31,34 +38,30 @@ export class AuthService {
    * @returns {Promise<{user: {id: string, email: string, name: string, role: string}, token: string}>}
    */
   async login(email, password) {
-    const result = await pool.query(
-      'SELECT id, email, name, password, role FROM users WHERE email = $1',
-      [email]
-    );
+    return await this.userRepository.withTransaction(async () => {
+      try {
+        const user = await this.userRepository.findByEmail(email);
+        
+        const isValid = await bcrypt.compare(password, user.password);
+        if (!isValid) {
+          throw new AuthorizationError('Invalid credentials');
+        }
 
-    const user = result.rows[0];
-    if (!user) {
-      throw new Error('Invalid credentials');
-    }
+        const updatedUser = await this.userRepository.updateLastLogin(user.id);
+        const { password: _, ...userData } = updatedUser;
+        const token = this.generateToken(userData);
 
-    const isValid = await bcrypt.compare(password, user.password);
-    if (!isValid) {
-      throw new Error('Invalid credentials');
-    }
-
-    // Update last_login timestamp
-    await pool.query(
-      'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1',
-      [user.id]
-    );
-
-    const token = this.generateToken(user);
-    const { password: _, ...userData } = user;
-
-    return {
-      user: userData,
-      token
-    };
+        return {
+          user: userData,
+          token
+        };
+      } catch (error) {
+        if (error.name === 'NotFoundError') {
+          throw new AuthorizationError('Invalid credentials');
+        }
+        throw error;
+      }
+    });
   }
 
   /**
@@ -69,12 +72,14 @@ export class AuthService {
   async validateToken(token) {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const result = await pool.query(
-        'SELECT id FROM users WHERE id = $1',
-        [decoded.userId]
-      );
-      return result.rows.length > 0;
+      
+      // Check if user exists and is active
+      await this.userRepository.findById(decoded.userId);
+      return true;
     } catch (error) {
+      if (error instanceof jwt.JsonWebTokenError) {
+        throw new AuthorizationError('Invalid token');
+      }
       return false;
     }
   }
@@ -102,28 +107,28 @@ export class AuthService {
    * @param {string} userId 
    * @param {string} currentPassword 
    * @param {string} newPassword 
-   * @returns {Promise<void>}
+   * @returns {Promise<{updated_at: Date}>}
    */
   async changePassword(userId, currentPassword, newPassword) {
-    const result = await pool.query(
-      'SELECT password FROM users WHERE id = $1',
-      [userId]
-    );
+    return await this.userRepository.withTransaction(async () => {
+      const user = await this.userRepository.findById(userId);
 
-    const user = result.rows[0];
-    if (!user) {
-      throw new Error('User not found');
-    }
+      // Verify current password
+      const isValid = await bcrypt.compare(currentPassword, user.password);
+      if (!isValid) {
+        throw new ValidationError('Invalid current password', 'currentPassword');
+      }
 
-    const isValid = await bcrypt.compare(currentPassword, user.password);
-    if (!isValid) {
-      throw new Error('Invalid current password');
-    }
+      // Hash new password and update
+      const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
+      
+      const updatedUser = await this.userRepository.updateUser(userId, {
+        password: hashedPassword
+      });
 
-    const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
-    await pool.query(
-      'UPDATE users SET password = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-      [hashedPassword, userId]
-    );
+      return {
+        updated_at: updatedUser.updated_at
+      };
+    });
   }
 }

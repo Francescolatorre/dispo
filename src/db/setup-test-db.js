@@ -9,7 +9,7 @@ const __dirname = dirname(__filename);
 
 dotenv.config({ path: join(__dirname, '../../.env') });
 
-async function setupTestDb() {
+export async function setupTestDb() {
   const testPool = new Pool({
     user: process.env.DB_USER,
     host: process.env.DB_HOST,
@@ -134,4 +134,7 @@ async function setupTestDb() {
   }
 }
 
-setupTestDb();
+// Only run if this file is executed directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  setupTestDb();
+}

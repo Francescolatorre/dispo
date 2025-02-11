@@ -1,10 +1,14 @@
 import request from 'supertest';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, beforeAll } from 'vitest';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import pool from '../../config/database.js';
 import app from '../../server.js';
-import { setupTestDb } from './setup.js';
+import { setupTestDb, cleanTestDb } from './setup.js';
+
+// Set up test environment
+process.env.JWT_SECRET = 'test-secret-key';
+process.env.NODE_ENV = 'test';
 
 describe('Auth Routes', () => {
   let testUser;
@@ -12,12 +16,12 @@ describe('Auth Routes', () => {
 
   const getUniqueEmail = () => `test${testCount}@example.com`;
 
-  beforeEach(async () => {
-    // Ensure database is set up
+  beforeAll(async () => {
     await setupTestDb();
-    
-    // Clean up users table before each test
-    await pool.query('DELETE FROM users');
+  });
+
+  beforeEach(async () => {
+    await cleanTestDb();
     testCount++;
 
     // Create test user
