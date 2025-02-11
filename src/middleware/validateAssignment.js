@@ -1,5 +1,5 @@
-const { pool } = require('../config/database');
-const assignmentService = require('../services/assignmentService');
+import pool from '../config/database.js';
+import assignmentService from '../services/assignmentService.js';
 
 const validateAssignment = async (req, res, next) => {
   const {
@@ -182,4 +182,4 @@ const validateAssignment = async (req, res, next) => {
   }
 };
 
-module.exports = validateAssignment;
+export default validateAssignment;

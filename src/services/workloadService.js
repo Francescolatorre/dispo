@@ -1,4 +1,4 @@
-const { pool } = require('../config/database');
+import pool from '../config/database.js';
 
 /**
  * @typedef {Object} DailyWorkload
@@ -146,4 +146,5 @@ class WorkloadService {
   }
 }
 
-module.exports = new WorkloadService();
+const workloadService = new WorkloadService();
+export default workloadService;

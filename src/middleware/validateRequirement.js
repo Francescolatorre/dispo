@@ -90,4 +90,4 @@ const validateRequirement = (req, res, next) => {
   next();
 };
 
-module.exports = validateRequirement;
+export default validateRequirement;

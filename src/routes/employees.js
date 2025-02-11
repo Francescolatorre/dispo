@@ -1,176 +1,235 @@
-const express = require('express');
-const router = express.Router();
-const db = require('../config/database');
-const validateEmployee = require('../middleware/validateEmployee');
+import express from 'express';
+import { EmployeeService } from '../services/employeeService.js';
+import { logger } from '../utils/logger.js';
+import { validateSchema, employeeSchema, updateEmployeeSchema } from '../middleware/validation/employee.schema.js';
+import { NotFoundError, ValidationError, ConflictError } from '../errors/index.js';
 
-// Get all employees
+const router = express.Router();
+const employeeService = new EmployeeService();
+
+// Get all employees with pagination
 router.get('/', async (req, res) => {
+  const { limit = 10, offset = 0 } = req.query;
+
+  logger.info('Fetching employees list', {
+    context: {
+      limit,
+      offset,
+      route: 'GET /employees'
+    }
+  });
+
   try {
-    const result = await db.query(
-      'SELECT * FROM employees ORDER BY created_at DESC'
-    );
-    res.json(result.rows);
-  } catch (err) {
-    console.error('Error fetching employees:', err);
+    const result = await employeeService.listEmployees({
+      limit: parseInt(limit),
+      offset: parseInt(offset)
+    });
+
+    res.json(result);
+  } catch (error) {
+    logger.error('Failed to fetch employees', {
+      error,
+      context: {
+        limit,
+        offset,
+        route: 'GET /employees'
+      }
+    });
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // Get single employee by ID
 router.get('/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const result = await db.query(
-      'SELECT * FROM employees WHERE id = $1',
-      [id]
-    );
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Employee not found' });
+  const { id } = req.params;
+
+  logger.info('Fetching employee by ID', {
+    context: {
+      employeeId: id,
+      route: 'GET /employees/:id'
     }
-    
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error('Error fetching employee:', err);
-    res.status(500).json({ error: 'Internal server error' });
+  });
+
+  try {
+    const employee = await employeeService.getEmployeeById(id);
+    res.json(employee);
+  } catch (error) {
+    if (error instanceof NotFoundError) {
+      logger.warn('Employee not found', {
+        context: {
+          employeeId: id,
+          route: 'GET /employees/:id'
+        }
+      });
+      res.status(404).json({ error: error.message });
+    } else {
+      logger.error('Failed to fetch employee', {
+        error,
+        context: {
+          employeeId: id,
+          route: 'GET /employees/:id'
+        }
+      });
+      res.status(500).json({ error: 'Internal server error' });
+    }
   }
 });
 
 // Create new employee
-router.post('/', validateEmployee, async (req, res) => {
-  try {
-    const {
-      name,
-      employee_number,
-      entry_date,
-      email,
-      phone,
-      position,
-      seniority_level,
-      qualifications,
-      work_time_factor,
-      contract_end_date,
-      status,
-      part_time_factor
-    } = req.body;
+router.post(
+  '/',
+  validateSchema(employeeSchema),
+  async (req, res) => {
+    logger.info('Creating new employee', {
+      context: {
+        employeeNumber: req.body.employee_number,
+        email: req.body.email,
+        route: 'POST /employees'
+      }
+    });
 
-    const result = await db.query(
-      `INSERT INTO employees (
-        name,
-        employee_number,
-        entry_date,
-        email,
-        phone,
-        position,
-        seniority_level,
-        level_code,
-        qualifications,
-        work_time_factor,
-        contract_end_date,
-        status,
-        part_time_factor
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
-      [
-        name,
-        employee_number,
-        entry_date,
-        email,
-        phone,
-        position,
-        seniority_level,
-        req.body.level_code,
-        qualifications,
-        work_time_factor,
-        contract_end_date,
-        status,
-        part_time_factor
-      ]
-    );
-
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    console.error('Error creating employee:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    try {
+      const employee = await employeeService.createEmployee(req.body);
+      res.status(201).json(employee);
+    } catch (error) {
+      if (error instanceof ConflictError) {
+        logger.warn('Employee creation conflict', {
+          error,
+          context: {
+            field: error.field,
+            value: error.value,
+            route: 'POST /employees'
+          }
+        });
+        res.status(409).json({ error: error.message });
+      } else if (error instanceof ValidationError) {
+        logger.warn('Employee validation failed', {
+          error,
+          context: {
+            field: error.field,
+            route: 'POST /employees'
+          }
+        });
+        res.status(400).json({ error: error.message });
+      } else {
+        logger.error('Failed to create employee', {
+          error,
+          context: {
+            employeeData: req.body,
+            route: 'POST /employees'
+          }
+        });
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    }
   }
-});
+);
 
 // Update employee
-router.put('/:id', validateEmployee, async (req, res) => {
-  try {
+router.put(
+  '/:id',
+  validateSchema(updateEmployeeSchema),
+  async (req, res) => {
     const { id } = req.params;
-    const {
-      name,
-      seniority_level,
-      qualifications,
-      work_time_factor,
-      contract_end_date
-    } = req.body;
 
-    const result = await db.query(
-      `UPDATE employees
-       SET name = $1,
-           seniority_level = $2,
-           level_code = $3,
-           qualifications = $4,
-           work_time_factor = $5,
-           contract_end_date = $6,
-           email = $7,
-           phone = $8,
-           position = $9,
-           status = $10,
-           part_time_factor = $11,
-           updated_at = CURRENT_TIMESTAMP
-       WHERE id = $12
-       RETURNING *`,
-      [name, seniority_level, req.body.level_code, qualifications, work_time_factor, contract_end_date, email, phone, position, status, part_time_factor, id]
-    );
+    logger.info('Updating employee', {
+      context: {
+        employeeId: id,
+        updateFields: Object.keys(req.body),
+        route: 'PUT /employees/:id'
+      }
+    });
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Employee not found' });
+    try {
+      const employee = await employeeService.updateEmployee(id, req.body);
+      res.json(employee);
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        logger.warn('Employee not found for update', {
+          context: {
+            employeeId: id,
+            route: 'PUT /employees/:id'
+          }
+        });
+        res.status(404).json({ error: error.message });
+      } else if (error instanceof ConflictError) {
+        logger.warn('Employee update conflict', {
+          error,
+          context: {
+            employeeId: id,
+            field: error.field,
+            route: 'PUT /employees/:id'
+          }
+        });
+        res.status(409).json({ error: error.message });
+      } else if (error instanceof ValidationError) {
+        logger.warn('Employee update validation failed', {
+          error,
+          context: {
+            employeeId: id,
+            field: error.field,
+            route: 'PUT /employees/:id'
+          }
+        });
+        res.status(400).json({ error: error.message });
+      } else {
+        logger.error('Failed to update employee', {
+          error,
+          context: {
+            employeeId: id,
+            updateData: req.body,
+            route: 'PUT /employees/:id'
+          }
+        });
+        res.status(500).json({ error: 'Internal server error' });
+      }
     }
-
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error('Error updating employee:', err);
-    res.status(500).json({ error: 'Internal server error' });
   }
-});
+);
 
 // Delete employee
 router.delete('/:id', async (req, res) => {
+  const { id } = req.params;
+
+  logger.info('Deleting employee', {
+    context: {
+      employeeId: id,
+      route: 'DELETE /employees/:id'
+    }
+  });
+
   try {
-    const { id } = req.params;
-    
-    // Check if employee exists
-    const checkResult = await db.query(
-      'SELECT id FROM employees WHERE id = $1',
-      [id]
-    );
-
-    if (checkResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Employee not found' });
-    }
-
-    // Check if employee has project assignments
-    const assignmentResult = await db.query(
-      'SELECT id FROM project_assignments WHERE employee_id = $1 LIMIT 1',
-      [id]
-    );
-
-    if (assignmentResult.rows.length > 0) {
-      return res.status(400).json({
-        error: 'Cannot delete employee with existing project assignments'
-      });
-    }
-
-    // Delete employee
-    await db.query('DELETE FROM employees WHERE id = $1', [id]);
-    
+    await employeeService.deleteEmployee(id);
     res.status(204).send();
-  } catch (err) {
-    console.error('Error deleting employee:', err);
-    res.status(500).json({ error: 'Internal server error' });
+  } catch (error) {
+    if (error instanceof NotFoundError) {
+      logger.warn('Employee not found for deletion', {
+        context: {
+          employeeId: id,
+          route: 'DELETE /employees/:id'
+        }
+      });
+      res.status(404).json({ error: error.message });
+    } else if (error instanceof ConflictError) {
+      logger.warn('Cannot delete employee with assignments', {
+        error,
+        context: {
+          employeeId: id,
+          route: 'DELETE /employees/:id'
+        }
+      });
+      res.status(400).json({ error: error.message });
+    } else {
+      logger.error('Failed to delete employee', {
+        error,
+        context: {
+          employeeId: id,
+          route: 'DELETE /employees/:id'
+        }
+      });
+      res.status(500).json({ error: 'Internal server error' });
+    }
   }
 });
 
-module.exports = router;
+export default router;
