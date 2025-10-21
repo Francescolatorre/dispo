@@ -1,4 +1,4 @@
-import { extendTheme } from '@chakra-ui/react';
+import { extendTheme, type StyleFunctionProps } from '@chakra-ui/react';
 
 // Map MUI palette to Chakra colors
 const colors = {
@@ -71,14 +71,14 @@ const components = {
       colorScheme: 'primary',
     },
     variants: {
-      solid: (props: any) => ({
+      solid: (props: StyleFunctionProps) => ({
         bg: `${props.colorScheme}.500`,
         color: 'white',
         _hover: {
           bg: `${props.colorScheme}.600`,
         },
       }),
-      outline: (props: any) => ({
+      outline: (props: StyleFunctionProps) => ({
         borderColor: `${props.colorScheme}.500`,
         color: `${props.colorScheme}.500`,
         _hover: {
@@ -92,7 +92,7 @@ const components = {
       variant: 'subtle',
     },
     variants: {
-      subtle: (props: any) => ({
+      subtle: (props: StyleFunctionProps) => ({
         container: {
           bg: `${props.status}.50`,
         },
@@ -104,7 +104,7 @@ const components = {
       variant: 'subtle',
     },
     variants: {
-      subtle: (props: any) => ({
+      subtle: (props: StyleFunctionProps) => ({
         bg: `${props.colorScheme}.50`,
         color: `${props.colorScheme}.600`,
       }),

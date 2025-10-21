@@ -1,5 +1,6 @@
 import axios from 'axios';
 import type { Employee, CreateEmployeeDto, UpdateEmployeeDto } from '../types/employee';
+import type { Assignment } from '../types/assignment';
 
 const API_BASE_URL = '/api';
 
@@ -46,7 +47,7 @@ class EmployeeService {
   /**
    * Get employee assignments
    */
-  async getEmployeeAssignments(id: number): Promise<any[]> {
+  async getEmployeeAssignments(id: number): Promise<Assignment[]> {
     const response = await axios.get(`${API_BASE_URL}/employees/${id}/assignments`);
     return response.data;
   }
@@ -61,7 +62,7 @@ class EmployeeService {
   ): Promise<{
     date: string;
     workload: number;
-    assignments: any[];
+    assignments: Assignment[];
   }[]> {
     const response = await axios.get(
       `${API_BASE_URL}/employees/${id}/availability?start_date=${startDate}&end_date=${endDate}`

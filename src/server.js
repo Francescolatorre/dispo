@@ -6,6 +6,7 @@ const employeesRouter = require('./routes/employees');
 const projectsRouter = require('./routes/projects');
 const requirementsRouter = require('./routes/requirements');
 const assignmentsRouter = require('./routes/assignments');
+const { errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
 
@@ -41,14 +42,8 @@ app.get('/db-test', async (req, res) => {
   }
 });
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
-    message: 'Internal Server Error',
-    error: process.env.NODE_ENV === 'development' ? err.message : undefined
-  });
-});
+// Error handling middleware (must be last)
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 3001;
 
