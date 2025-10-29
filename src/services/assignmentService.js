@@ -114,14 +114,18 @@ class AssignmentService {
 
     // Enhance with current workload information
     const assignments = result.rows;
-    for (const assignment of assignments) {
-      const workload = await workloadService.calculateWorkload(
-        assignment.employee_id,
-        assignment.start_date,
-        assignment.end_date
-      );
-      assignment.totalWorkload = Math.max(...workload.map(w => w.totalWorkload));
-    }
+
+    // Parallelize workload calculations for better performance
+    await Promise.all(
+      assignments.map(async (assignment) => {
+        const workload = await workloadService.calculateWorkload(
+          assignment.employee_id,
+          assignment.start_date,
+          assignment.end_date
+        );
+        assignment.totalWorkload = Math.max(...workload.map(w => w.totalWorkload));
+      })
+    );
 
     return assignments;
   }
@@ -145,14 +149,18 @@ class AssignmentService {
 
     // Add workload information
     const assignments = result.rows;
-    for (const assignment of assignments) {
-      const workload = await workloadService.calculateWorkload(
-        employeeId,
-        assignment.start_date,
-        assignment.end_date
-      );
-      assignment.totalWorkload = Math.max(...workload.map(w => w.totalWorkload));
-    }
+
+    // Parallelize workload calculations for better performance
+    await Promise.all(
+      assignments.map(async (assignment) => {
+        const workload = await workloadService.calculateWorkload(
+          employeeId,
+          assignment.start_date,
+          assignment.end_date
+        );
+        assignment.totalWorkload = Math.max(...workload.map(w => w.totalWorkload));
+      })
+    );
 
     return assignments;
   }

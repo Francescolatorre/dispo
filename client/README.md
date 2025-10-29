@@ -5,7 +5,7 @@ A modern React application for managing employee dispositions and project schedu
 ## Technologies
 
 - React 18 with TypeScript
-- Material-UI (MUI) for components and theming
+- Chakra UI for components and theming
 - React Router for navigation
 - Vite for build tooling
 - Vitest for testing
@@ -88,7 +88,7 @@ The project uses Vitest and React Testing Library for testing. Tests are co-loca
 - `Navigation.tsx` - Navigation component
   - Responsive drawer
   - Route management
-  - MUI integration
+  - Chakra UI integration
 
 ### Pages
 

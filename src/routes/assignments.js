@@ -2,17 +2,14 @@ const express = require('express');
 const router = express.Router();
 const assignmentService = require('../services/assignmentService');
 const validateAssignment = require('../middleware/validateAssignment');
+const validateId = require('../middleware/validateId');
 
 /**
  * Get assignments for a project
  */
-router.get('/project/:projectId', async (req, res) => {
+router.get('/project/:projectId', validateId('projectId', 'project'), async (req, res) => {
   try {
-    const projectId = parseInt(req.params.projectId);
-    if (isNaN(projectId)) {
-      return res.status(400).json({ error: 'Invalid project ID' });
-    }
-    const assignments = await assignmentService.getProjectAssignments(projectId);
+    const assignments = await assignmentService.getProjectAssignments(req.validatedId);
     res.json(assignments);
   } catch (error) {
     console.error('Error getting project assignments:', error);
@@ -23,13 +20,9 @@ router.get('/project/:projectId', async (req, res) => {
 /**
  * Get assignments for an employee
  */
-router.get('/employee/:employeeId', async (req, res) => {
+router.get('/employee/:employeeId', validateId('employeeId', 'employee'), async (req, res) => {
   try {
-    const employeeId = parseInt(req.params.employeeId);
-    if (isNaN(employeeId)) {
-      return res.status(400).json({ error: 'Invalid employee ID' });
-    }
-    const assignments = await assignmentService.getEmployeeAssignments(employeeId);
+    const assignments = await assignmentService.getEmployeeAssignments(req.validatedId);
     res.json(assignments);
   } catch (error) {
     console.error('Error getting employee assignments:', error);
@@ -40,13 +33,9 @@ router.get('/employee/:employeeId', async (req, res) => {
 /**
  * Get a single assignment by ID
  */
-router.get('/:id', async (req, res) => {
+router.get('/:id', validateId('id', 'assignment'), async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) {
-      return res.status(400).json({ error: 'Invalid assignment ID' });
-    }
-    const assignment = await assignmentService.getAssignmentById(id);
+    const assignment = await assignmentService.getAssignmentById(req.validatedId);
     if (!assignment) {
       return res.status(404).json({ error: 'Assignment not found' });
     }
@@ -77,13 +66,9 @@ router.post('/', validateAssignment, async (req, res) => {
 /**
  * Update an assignment
  */
-router.put('/:id', validateAssignment, async (req, res) => {
+router.put('/:id', validateId('id', 'assignment'), validateAssignment, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) {
-      return res.status(400).json({ error: 'Invalid assignment ID' });
-    }
-    const assignment = await assignmentService.updateAssignment(id, req.body);
+    const assignment = await assignmentService.updateAssignment(req.validatedId, req.body);
     if (!assignment) {
       return res.status(404).json({ error: 'Assignment not found' });
     }
@@ -97,18 +82,14 @@ router.put('/:id', validateAssignment, async (req, res) => {
 /**
  * Terminate an assignment
  */
-router.post('/:id/terminate', async (req, res) => {
+router.post('/:id/terminate', validateId('id', 'assignment'), async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) {
-      return res.status(400).json({ error: 'Invalid assignment ID' });
-    }
     const { reason } = req.body;
     if (!reason) {
       return res.status(400).json({ error: 'Termination reason is required' });
     }
 
-    const assignment = await assignmentService.terminateAssignment(id, reason);
+    const assignment = await assignmentService.terminateAssignment(req.validatedId, reason);
     if (!assignment) {
       return res.status(404).json({ error: 'Assignment not found' });
     }
@@ -122,13 +103,9 @@ router.post('/:id/terminate', async (req, res) => {
 /**
  * Get assignment history for a requirement
  */
-router.get('/requirement/:requirementId/history', async (req, res) => {
+router.get('/requirement/:requirementId/history', validateId('requirementId', 'requirement'), async (req, res) => {
   try {
-    const requirementId = parseInt(req.params.requirementId);
-    if (isNaN(requirementId)) {
-      return res.status(400).json({ error: 'Invalid requirement ID' });
-    }
-    const history = await assignmentService.getRequirementHistory(requirementId);
+    const history = await assignmentService.getRequirementHistory(req.validatedId);
     res.json(history);
   } catch (error) {
     console.error('Error getting requirement history:', error);
@@ -139,21 +116,17 @@ router.get('/requirement/:requirementId/history', async (req, res) => {
 /**
  * Check employee availability
  */
-router.get('/check-availability/:employeeId', async (req, res) => {
+router.get('/check-availability/:employeeId', validateId('employeeId', 'employee'), async (req, res) => {
   try {
-    const employeeId = parseInt(req.params.employeeId);
-    if (isNaN(employeeId)) {
-      return res.status(400).json({ error: 'Invalid employee ID' });
-    }
     const { start_date, end_date } = req.query;
     if (!start_date || !end_date) {
-      return res.status(400).json({ 
-        error: 'Start date and end date are required' 
+      return res.status(400).json({
+        error: 'Start date and end date are required'
       });
     }
 
     const availability = await assignmentService.checkEmployeeAvailability(
-      employeeId,
+      req.validatedId,
       start_date,
       end_date
     );

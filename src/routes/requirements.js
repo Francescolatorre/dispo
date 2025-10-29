@@ -2,17 +2,14 @@ const express = require('express');
 const router = express.Router();
 const requirementService = require('../services/requirementService');
 const validateRequirement = require('../middleware/validateRequirement');
+const validateId = require('../middleware/validateId');
 
 /**
  * Get all requirements for a project
  */
-router.get('/project/:projectId', async (req, res) => {
+router.get('/project/:projectId', validateId('projectId', 'project'), async (req, res) => {
   try {
-    const projectId = parseInt(req.params.projectId);
-    if (isNaN(projectId)) {
-      return res.status(400).json({ error: 'Invalid project ID' });
-    }
-    const requirements = await requirementService.getProjectRequirements(projectId);
+    const requirements = await requirementService.getProjectRequirements(req.validatedId);
     res.json(requirements);
   } catch (error) {
     console.error('Error getting project requirements:', error);
@@ -23,13 +20,9 @@ router.get('/project/:projectId', async (req, res) => {
 /**
  * Get a single requirement by ID
  */
-router.get('/:id', async (req, res) => {
+router.get('/:id', validateId('id', 'requirement'), async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) {
-      return res.status(400).json({ error: 'Invalid requirement ID' });
-    }
-    const requirement = await requirementService.getRequirementById(id);
+    const requirement = await requirementService.getRequirementById(req.validatedId);
     if (!requirement) {
       return res.status(404).json({ error: 'Requirement not found' });
     }
@@ -65,13 +58,9 @@ router.post('/', validateRequirement, async (req, res) => {
 /**
  * Update a requirement
  */
-router.put('/:id', validateRequirement, async (req, res) => {
+router.put('/:id', validateId('id', 'requirement'), validateRequirement, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) {
-      return res.status(400).json({ error: 'Invalid requirement ID' });
-    }
-    const requirement = await requirementService.updateRequirement(id, req.body);
+    const requirement = await requirementService.updateRequirement(req.validatedId, req.body);
     if (!requirement) {
       return res.status(404).json({ error: 'Requirement not found' });
     }
@@ -85,13 +74,9 @@ router.put('/:id', validateRequirement, async (req, res) => {
 /**
  * Delete a requirement
  */
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', validateId('id', 'requirement'), async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) {
-      return res.status(400).json({ error: 'Invalid requirement ID' });
-    }
-    await requirementService.deleteRequirement(id);
+    await requirementService.deleteRequirement(req.validatedId);
     res.status(204).end();
   } catch (error) {
     console.error('Error deleting requirement:', error);
@@ -102,17 +87,13 @@ router.delete('/:id', async (req, res) => {
 /**
  * Get coverage analysis for a requirement
  */
-router.get('/:id/coverage', async (req, res) => {
+router.get('/:id/coverage', validateId('id', 'requirement'), async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) {
-      return res.status(400).json({ error: 'Invalid requirement ID' });
-    }
-    const requirement = await requirementService.getRequirementById(id);
+    const requirement = await requirementService.getRequirementById(req.validatedId);
     if (!requirement) {
       return res.status(404).json({ error: 'Requirement not found' });
     }
-    const coverage = await requirementService.getRequirementCoverage(id);
+    const coverage = await requirementService.getRequirementCoverage(req.validatedId);
     if (!coverage) {
       return res.json({ periods: [] });
     }
@@ -126,17 +107,13 @@ router.get('/:id/coverage', async (req, res) => {
 /**
  * Find matching employees for a requirement
  */
-router.get('/:id/matching-employees', async (req, res) => {
+router.get('/:id/matching-employees', validateId('id', 'requirement'), async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
-    if (isNaN(id)) {
-      return res.status(400).json({ error: 'Invalid requirement ID' });
-    }
-    const requirement = await requirementService.getRequirementById(id);
+    const requirement = await requirementService.getRequirementById(req.validatedId);
     if (!requirement) {
       return res.status(404).json({ error: 'Requirement not found' });
     }
-    const employees = await requirementService.findMatchingEmployees(id);
+    const employees = await requirementService.findMatchingEmployees(req.validatedId);
     res.json(employees);
   } catch (error) {
     console.error('Error finding matching employees:', error);

@@ -9,7 +9,7 @@ import { useProject } from '../../contexts/ProjectContext';
 import AssignmentForm from '../assignments/AssignmentForm';
 import Timeline from '../timeline/Timeline';
 import { assignmentService } from '../../services/assignmentService';
-import type { AssignmentWithRelations } from '../../types/assignment';
+import type { AssignmentWithRelations, CreateAssignmentDto, UpdateAssignmentDto } from '../../types/assignment';
 
 const ProjectAssignmentsPanel: React.FC = () => {
   const { assignments, refreshData } = useProject();
@@ -48,12 +48,12 @@ const ProjectAssignmentsPanel: React.FC = () => {
     }
   };
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: CreateAssignmentDto | UpdateAssignmentDto) => {
     try {
       if (selectedAssignment) {
-        await assignmentService.updateAssignment(selectedAssignment.id, data);
+        await assignmentService.updateAssignment(selectedAssignment.id, data as UpdateAssignmentDto);
       } else {
-        await assignmentService.createAssignment(data);
+        await assignmentService.createAssignment(data as CreateAssignmentDto);
       }
       refreshData();
       onClose();
