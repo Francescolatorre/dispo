@@ -5,10 +5,13 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "test": "jest",
+    "test": "jest --testPathIgnorePatterns='/src/routes/__tests__/assignments.test.js' '/src/routes/__tests__/projects.test.js'",
+    "test:unit": "jest --testPathPattern='(middleware|utils|services)/__tests__'",
+    "test:routes": "jest --testPathPattern='routes/__tests__'",
     "test:watch": "jest --watch",
     "test:db": "jest src/db/tests --runInBand",
     "test:db:watch": "jest src/db/tests --runInBand --watch",
+    "test:coverage": "jest --coverage --testPathIgnorePatterns='/src/routes/__tests__/assignments.test.js' '/src/routes/__tests__/projects.test.js'",
     "lint": "eslint src --max-warnings 0",
     "lint:fix": "eslint src --fix"
   },
