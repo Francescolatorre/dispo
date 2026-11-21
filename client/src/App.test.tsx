@@ -1,12 +1,21 @@
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App';
 import { AppRoutes } from './AppRoutes';
 import { renderWithProviders } from './test/render';
 
 describe('App', () => {
-  it('renders the shell with navigation and the planning page at /', () => {
+  beforeEach(() => window.localStorage.clear());
+
+  it('loads seed data via the PlanningProvider and shows a summary', async () => {
     render(<App />);
+    expect(await screen.findByTestId('planning-summary')).toHaveTextContent('14 Personen · 7 Projekte · 30 Einsätze');
+    expect(window.localStorage.getItem('dispo.v1')).not.toBeNull();
+  });
+
+  it('renders the shell with navigation and the planning page at /', async () => {
+    render(<App />);
+    await screen.findByTestId('planning-summary');
 
     const nav = screen.getByRole('navigation', { name: 'Hauptnavigation' });
     expect(within(nav).getByRole('link', { name: 'Planung' })).toHaveAttribute('href', '/');
@@ -21,13 +30,15 @@ describe('AppRoutes', () => {
     ['/', 'Planung'],
     ['/people', 'Personen'],
     ['/projects', 'Projekte'],
-  ])('renders the page for %s', (route, heading) => {
+  ])('renders the page for %s', async (route, heading) => {
     renderWithProviders(<AppRoutes />, { route });
+    await act(async () => {}); // let the PlanningProvider's initial load settle
     expect(screen.getByRole('heading', { level: 1, name: heading })).toBeInTheDocument();
   });
 
-  it('redirects unknown routes to the planning page', () => {
+  it('redirects unknown routes to the planning page', async () => {
     renderWithProviders(<AppRoutes />, { route: '/does-not-exist' });
+    await act(async () => {});
     expect(screen.getByRole('heading', { level: 1, name: 'Planung' })).toBeInTheDocument();
   });
 
