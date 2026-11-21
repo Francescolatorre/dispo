@@ -72,9 +72,29 @@ const semanticTokens = {
   },
 };
 
+/**
+ * Extra colour scale for the project palette (`domain/projectColors.ts`); Chakra has no
+ * indigo by default. Full 50–900 scale because bars use `.100`, `.200`, `.500` and `.900`.
+ */
+const colors = {
+  indigo: {
+    50: '#EEF2FF',
+    100: '#E0E7FF',
+    200: '#C7D2FE',
+    300: '#A5B4FC',
+    400: '#818CF8',
+    500: '#6366F1',
+    600: '#4F46E5',
+    700: '#4338CA',
+    800: '#3730A3',
+    900: '#312E81',
+  },
+};
+
 /** The single Chakra theme of the app. */
 const theme = extendTheme({
   config,
+  colors,
   semanticTokens,
   components: {
     Button,

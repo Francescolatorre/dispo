@@ -6,6 +6,7 @@
  *   inactive employee). Overbooking is shown, never prevented.
  */
 import { isISODate, listWeeks } from './dates';
+import { isProjectColor, PROJECT_COLORS } from './projectColors';
 import {
   PROJECT_STATUSES,
   SENIORITIES,
@@ -31,7 +32,8 @@ export type ValidationCode =
   | 'CAPACITY_RANGE'
   | 'OVERBOOKED'
   | 'OUTSIDE_PROJECT'
-  | 'INACTIVE_EMPLOYEE';
+  | 'INACTIVE_EMPLOYEE'
+  | 'COLOR_NOT_IN_PALETTE';
 
 export interface ValidationIssue {
   code: ValidationCode;
@@ -183,12 +185,20 @@ export function validateProject(input: ProjectInput): ValidationResult {
   if (typeof input.name !== 'string' || input.name.trim() === '') {
     errors.push({ code: 'REQUIRED', field: 'name', message: 'Name ist erforderlich.' });
   }
+  const warnings: ValidationIssue[] = [];
   if (typeof input.color !== 'string' || input.color.trim() === '') {
     errors.push({ code: 'REQUIRED', field: 'color', message: 'Farbe ist erforderlich.' });
+  } else if (!isProjectColor(input.color)) {
+    // Non-blocking so legacy data stays editable; the UI only offers palette colours.
+    warnings.push({
+      code: 'COLOR_NOT_IN_PALETTE',
+      field: 'color',
+      message: `Farbe "${input.color}" ist nicht in der Projektpalette (${PROJECT_COLORS.join(', ')}) und kann mit Auslastungswarnungen verwechselt werden.`,
+    });
   }
   if (!PROJECT_STATUSES.includes(input.status)) {
     errors.push({ code: 'INVALID_VALUE', field: 'status', message: `Ungültiger Status "${String(input.status)}".` });
   }
   validateRange(input.start, input.end, errors);
-  return { errors, warnings: [] };
+  return { errors, warnings };
 }

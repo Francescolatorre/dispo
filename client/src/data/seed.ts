@@ -37,11 +37,11 @@ const EMPLOYEES: EmployeeSeed[] = [
 const PROJECTS: Array<[string, string, number, number, Project['status']]> = [
   ['Website-Relaunch', 'blue', -4, 6, 'active'],
   ['Mobile App 2.0', 'purple', -2, 14, 'active'],
-  ['Security-Audit', 'red', -4, 1, 'active'],
+  ['Security-Audit', 'cyan', -4, 1, 'active'],
   ['Datenplattform', 'teal', -2, 16, 'active'],
-  ['CRM-Migration', 'orange', 2, 12, 'planned'],
+  ['CRM-Migration', 'indigo', 2, 12, 'planned'],
   ['KI-Assistent', 'pink', 4, 16, 'planned'],
-  ['Onboarding-Portal', 'green', -4, 3, 'active'],
+  ['Onboarding-Portal', 'gray', -4, 3, 'active'],
 ];
 
 /** [employee #, project #, startWeek, endWeek, allocation, endDayOffset?] (1-based indices) */

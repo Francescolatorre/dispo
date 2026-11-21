@@ -453,9 +453,9 @@ export function createPlanningActions(
         if (!existing) return notFound('project', id);
         const merged: Project = { ...existing };
         for (const [k, v] of Object.entries(patch)) if (v !== undefined) (merged as unknown as Data)[k] = v;
-        const { errors } = validateProject(withoutId(merged) as unknown as ProjectInput);
-        if (errors.length > 0) return { ok: false, errors, warnings: [] };
-        const warnings: ValidationIssue[] = [];
+        const { errors, warnings: projectWarnings } = validateProject(withoutId(merged) as unknown as ProjectInput);
+        if (errors.length > 0) return { ok: false, errors, warnings: projectWarnings };
+        const warnings: ValidationIssue[] = [...projectWarnings];
         const outside = state.assignments.filter(
           (a) => a.projectId === id && (a.start < merged.start || a.end > merged.end),
         );
