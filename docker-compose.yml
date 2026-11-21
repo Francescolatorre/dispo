@@ -1,0 +1,25 @@
+# Fixed project name so containers/volumes are the same from any checkout or worktree.
+name: dispo
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: dispo
+      POSTGRES_PASSWORD: dispo
+      POSTGRES_DB: dispo
+    ports:
+      - "${DB_HOST_PORT:-5433}:5432"
+    volumes:
+      - dispo-pgdata:/var/lib/postgresql/data
+      # Runs only on first start (empty volume): creates the dispo_test database.
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dispo -d dispo"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  dispo-pgdata:

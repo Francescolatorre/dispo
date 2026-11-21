@@ -1,46 +1,31 @@
 {
   "name": "dispomvp",
   "version": "1.0.0",
-  "main": "index.js",
-  "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:db": "jest src/db/tests --runInBand",
-    "test:db:watch": "jest src/db/tests --runInBand --watch",
-    "lint": "eslint src --max-warnings 0",
-    "lint:fix": "eslint src --fix"
+  "private": true,
+  "description": "DispoMVP resource planning - REST API (Express + Postgres)",
+  "main": "server/index.js",
+  "engines": {
+    "node": ">=22"
   },
-  "keywords": [],
-  "author": "",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "db:up": "docker compose up -d --wait db",
+    "db:down": "docker compose down",
+    "db:migrate": "node server/migrate.js",
+    "test": "node --test --test-concurrency=1 \"server/test/*.test.js\"",
+    "lint": "eslint server --max-warnings 0"
+  },
   "license": "ISC",
-  "description": "",
   "dependencies": {
-    "@types/pg": "^8.11.11",
-    "bcryptjs": "^2.4.3",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2",
-    "pg": "^8.13.1"
+    "cors": "2.8.6",
+    "express": "4.22.3",
+    "pg": "8.23.1"
   },
   "devDependencies": {
-    "@eslint/js": "^9.0.0",
-    "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^16.2.0",
-    "@testing-library/user-event": "^14.6.1",
-    "eslint": "^8.55.0",
-    "globals": "^15.0.0",
-    "jest": "^29.7.0",
-    "jest-environment-node": "^29.7.0",
-    "nodemon": "^3.1.9",
-    "pg-format": "^1.0.4",
-    "supertest": "^7.0.0"
-  },
-  "jest": {
-    "testEnvironment": "node",
-    "setupFiles": [
-      "dotenv/config"
-    ]
+    "@eslint/js": "10.0.1",
+    "eslint": "10.14.0",
+    "globals": "17.14.0",
+    "supertest": "7.3.1"
   }
 }

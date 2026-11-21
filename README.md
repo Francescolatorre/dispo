@@ -81,11 +81,7 @@ cp .env.example .env
 # Edit .env with your configuration
 ```
 
-5. Initialize the database:
-
-```bash
-npm run db:init
-```
+5. Start and migrate the database: see [Backend](#backend-api) below.
 
 ### Development
 
@@ -113,6 +109,25 @@ cd client
 npm test
 ```
 
+## Backend (API)
+
+Slim Express 4 + PostgreSQL 17 REST API under `/api`, mirroring the client `Repository`
+interface (`client/src/data/repository.ts`). Ids are strings, dates `YYYY-MM-DD`, JSON is camelCase.
+Endpoint reference: [docs/api.md](docs/api.md).
+
+Requires Node >= 22 and Docker (e.g. Rancher Desktop).
+
+```bash
+cp .env.example .env    # optional - defaults match docker-compose.yml
+npm install
+npm run db:up           # postgres:17-alpine on localhost:5433 (DB_HOST_PORT), creates dispo + dispo_test
+npm run db:migrate      # applies server/migrations/*.sql to DATABASE_URL
+npm run dev             # API on http://localhost:3001/api (node --watch); `npm start` without watch
+npm test                # integration tests against TEST_DATABASE_URL (dispo_test), container must be up
+npm run lint
+npm run db:down         # stops the container, keeps the data volume
+```
+
 ## Project Structure
 
 ```
@@ -124,14 +139,11 @@ DispoMVP/
 │   │   ├── types/         # TypeScript types
 │   │   └── utils/         # Utility functions
 │   └── tests/             # Frontend tests
-├── src/                   # Backend Node.js application
-│   ├── config/           # Configuration files
-│   ├── db/               # Database migrations and setup
-│   ├── middleware/       # Express middleware
-│   ├── routes/          # API routes
-│   └── services/        # Business logic
-├── docs/                 # Documentation
-└── meta/                # Meta-models and schemas
+├── server/                # Backend: Express + Postgres REST API
+│   ├── migrations/       # SQL migrations (applied by server/migrate.js)
+│   └── test/             # API integration tests (node:test + supertest)
+├── db/init/               # Postgres container init scripts
+└── docs/                 # Documentation
 ```
 
 ## Documentation
