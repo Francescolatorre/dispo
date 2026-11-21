@@ -14,7 +14,6 @@ export default defineConfig({
     watch: {
       usePolling: true,
       interval: 1000, // Check for changes every second
-      threshold: 1000 // Batch changes
     }
   }
 })
