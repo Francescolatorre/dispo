@@ -26,6 +26,24 @@ export const SearchIcon = createIcon({
   ),
 });
 
+export const PlusIcon = createIcon({
+  displayName: 'PlusIcon',
+  viewBox: '0 0 24 24',
+  path: <path {...stroke} d="M12 5v14M5 12h14" />,
+});
+
+export const UndoIcon = createIcon({
+  displayName: 'UndoIcon',
+  viewBox: '0 0 24 24',
+  path: <path {...stroke} d="M9 14L4 9l5-5M4 9h10.5a5.5 5.5 0 010 11H11" />,
+});
+
+export const RedoIcon = createIcon({
+  displayName: 'RedoIcon',
+  viewBox: '0 0 24 24',
+  path: <path {...stroke} d="M15 14l5-5-5-5M20 9H9.5a5.5 5.5 0 000 11H13" />,
+});
+
 export const AlertIcon = createIcon({
   displayName: 'AlertIcon',
   viewBox: '0 0 24 24',

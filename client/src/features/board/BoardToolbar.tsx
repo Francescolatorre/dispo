@@ -12,11 +12,12 @@ import {
   Select,
   Switch,
   Text,
+  Tooltip,
 } from '@chakra-ui/react';
 import type { WeekRef } from '../../domain/dates';
 import type { Project } from '../../domain/types';
 import { formatDate, hasActiveFilters, MIN_FREE_PERCENT, NAV_STEP_WEEKS, type BoardFilters } from './boardModel';
-import { ChevronLeftIcon, ChevronRightIcon, SearchIcon } from './icons';
+import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, RedoIcon, SearchIcon, UndoIcon } from './icons';
 import { COLUMN_WIDTHS, type ColumnWidth } from './layout';
 
 const ZOOM_LABELS: Record<ColumnWidth, string> = { 64: 'Kompakt', 96: 'Normal', 140: 'Weit' };
@@ -35,6 +36,16 @@ export interface BoardToolbarProps {
   projects: readonly Project[];
   visibleCount: number;
   totalCount: number;
+  /** Opens the create dialog ("+ Einsatz"). */
+  onCreate?: () => void;
+  history?: {
+    canUndo: boolean;
+    canRedo: boolean;
+    undoLabel?: string;
+    redoLabel?: string;
+    onUndo: () => void;
+    onRedo: () => void;
+  };
 }
 
 export function BoardToolbar({
@@ -51,9 +62,13 @@ export function BoardToolbar({
   projects,
   visibleCount,
   totalCount,
+  onCreate,
+  history,
 }: BoardToolbarProps) {
   const first = weeks[0];
   const last = weeks[weeks.length - 1];
+  const undoText = history?.undoLabel ? `Rückgängig: ${history.undoLabel}` : undefined;
+  const redoText = history?.redoLabel ? `Wiederherstellen: ${history.redoLabel}` : undefined;
 
   return (
     <Flex direction="column" gap={3} as="section" aria-label="Zeitraum und Filter">
@@ -92,7 +107,40 @@ export function BoardToolbar({
             </Text>
           </Text>
         )}
-        <HStack spacing={2} ml="auto">
+        <HStack spacing={1} ml="auto">
+          {history && (
+            <>
+              <Tooltip label={undoText ?? 'Nichts rückgängig zu machen'} hasArrow openDelay={200}>
+                <IconButton
+                  aria-label={undoText ?? 'Rückgängig'}
+                  icon={<UndoIcon boxSize={4} />}
+                  size="sm"
+                  variant="ghost"
+                  colorScheme="gray"
+                  isDisabled={!history.canUndo}
+                  onClick={history.onUndo}
+                />
+              </Tooltip>
+              <Tooltip label={redoText ?? 'Nichts wiederherzustellen'} hasArrow openDelay={200}>
+                <IconButton
+                  aria-label={redoText ?? 'Wiederherstellen'}
+                  icon={<RedoIcon boxSize={4} />}
+                  size="sm"
+                  variant="ghost"
+                  colorScheme="gray"
+                  isDisabled={!history.canRedo}
+                  onClick={history.onRedo}
+                />
+              </Tooltip>
+            </>
+          )}
+          {onCreate && (
+            <Button size="sm" leftIcon={<PlusIcon boxSize={3.5} />} onClick={onCreate} ml={2}>
+              Einsatz
+            </Button>
+          )}
+        </HStack>
+        <HStack spacing={2}>
           <Text fontSize="xs" color="gray.500" id="zoom-label">
             Spaltenbreite
           </Text>

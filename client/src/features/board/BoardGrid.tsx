@@ -1,9 +1,10 @@
+import type { HTMLAttributes, Ref } from 'react';
 import { Box, Flex, Text } from '@chakra-ui/react';
 import type { WeekRef } from '../../domain/dates';
 import type { Employee, ISODate, Project, WeekKey } from '../../domain/types';
 import type { WeekLoad, WorkloadMatrix } from '../../domain/workload';
 import { formatDate, formatDayMonth, monthSegments } from './boardModel';
-import { BoardRow, NAME_COLUMN_WIDTH } from './BoardRow';
+import { BoardRow, NAME_COLUMN_WIDTH, type GhostBar } from './BoardRow';
 import { dateToX, type BoardGeometry, type RowLayout } from './layout';
 
 const MONTH_BAND_HEIGHT = 26;
@@ -20,6 +21,16 @@ export interface BoardGridProps {
   currentWeekKey: WeekKey;
   highlightProjectId: string;
   onAssignmentSelect?: (assignmentId: string) => void;
+  /** Delegated pointer/keyboard handlers of the interactions (drag, keyboard edits). */
+  interactionProps?: HTMLAttributes<HTMLDivElement>;
+  contentRef?: Ref<HTMLDivElement>;
+  /** While dragging: projected loads and changed weeks of the affected people. */
+  projection?: {
+    loads: Readonly<Record<string, Record<WeekKey, WeekLoad>>>;
+    changed: Readonly<Record<string, ReadonlySet<WeekKey>>>;
+  } | null;
+  ghost?: (GhostBar & { employeeId: string }) | null;
+  dragging?: { assignmentId: string; employeeId: string } | null;
 }
 
 const EMPTY_LOADS: Record<WeekKey, WeekLoad> = {};
@@ -39,6 +50,11 @@ export function BoardGrid({
   currentWeekKey,
   highlightProjectId,
   onAssignmentSelect,
+  interactionProps,
+  contentRef,
+  projection,
+  ghost,
+  dragging,
 }: BoardGridProps) {
   const { columnWidth, totalWidth } = geometry;
   const currentWeekIndex = weeks.findIndex((w) => w.key === currentWeekKey);
@@ -63,7 +79,7 @@ export function BoardGrid({
       boxShadow="sm"
       sx={{ overscrollBehaviorX: 'contain' }}
     >
-      <Box position="relative" w={`${contentWidth}px`} minW="full">
+      <Box ref={contentRef} position="relative" w={`${contentWidth}px`} minW="full" {...interactionProps}>
         {/* Header */}
         <Flex
           role="row"
@@ -161,13 +177,16 @@ export function BoardGrid({
                 employee={e}
                 rowIndex={i + 2}
                 layout={layout}
-                loads={matrix[e.id] ?? EMPTY_LOADS}
+                loads={projection?.loads[e.id] ?? matrix[e.id] ?? EMPTY_LOADS}
                 weeks={weeks}
                 geometry={geometry}
                 currentWeekIndex={currentWeekIndex}
                 projectsById={projectsById}
                 highlightProjectId={highlightProjectId}
                 onAssignmentSelect={onAssignmentSelect}
+                projectedWeeks={projection?.changed[e.id]}
+                ghost={ghost?.employeeId === e.id ? ghost : undefined}
+                draggingAssignmentId={dragging?.employeeId === e.id ? dragging.assignmentId : undefined}
               />
             );
           })}
