@@ -1,75 +1,54 @@
 import { defineConfig, devices } from '@playwright/test';
-import type { PlaywrightTestConfig } from '@playwright/test';
 
 /**
+ * E2E config (specs live in ./tests; none yet).
+ *
+ * Default: only the Vite dev server, pinned to the in-browser data source
+ * (`VITE_DATA_SOURCE=local`) — no database or API needed, every test starts from the seed.
+ *
+ * `E2E_DATA_SOURCE=api npx playwright test` additionally starts the REST API from the repo root
+ * (`node server/index.js`, needs Postgres: `npm run db:up && npm run db:migrate` there) and pins the
+ * client to it. Vite proxies `/api` to http://localhost:3001 (see vite.config.ts).
+ *
  * See https://playwright.dev/docs/test-configuration.
  */
-const config: PlaywrightTestConfig = {
+const useApi = process.env.E2E_DATA_SOURCE === 'api';
+const PORT = 5173;
+const baseURL = `http://localhost:${PORT}`;
+
+const vite = {
+  command: `npm run dev -- --port ${PORT} --strictPort`,
+  url: baseURL,
+  env: { VITE_DATA_SOURCE: useApi ? 'api' : 'local' },
+  reuseExistingServer: !process.env.CI,
+  timeout: 120 * 1000,
+};
+
+const api = {
+  command: 'node server/index.js',
+  cwd: '..',
+  url: 'http://localhost:3001/api/health',
+  reuseExistingServer: !process.env.CI,
+  timeout: 60 * 1000,
+};
+
+export default defineConfig({
   testDir: './tests',
   timeout: 30000,
-  /* Run tests in parallel */
-  fullyParallel: true,
-  /* Fail the build on CI if you accidentally left test.only in the source code. */
+  fullyParallel: !useApi, // a shared database needs serial tests
   forbidOnly: !!process.env.CI,
-  /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
-  /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : undefined,
-  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: [
-    ['html', { open: 'never' }],
-    ['list']
-  ],
+  workers: process.env.CI || useApi ? 1 : undefined,
+  reporter: [['html', { open: 'never' }], ['list']],
 
-  /* Configure projects for major browsers */
-  projects: [
-    {
-      name: 'chromium',
-      use: { 
-        ...devices['Desktop Chrome'],
-        launchOptions: {
-          args: ['--no-sandbox', '--disable-setuid-sandbox']
-        }
-      },
-    },
-    {
-      name: 'firefox',
-      use: { 
-        ...devices['Desktop Firefox'],
-        launchOptions: {
-          args: ['--no-sandbox', '--disable-setuid-sandbox']
-        }
-      },
-    },
-    {
-      name: 'webkit',
-      use: { 
-        ...devices['Desktop Safari'],
-        launchOptions: {
-          args: ['--no-sandbox', '--disable-setuid-sandbox']
-        }
-      },
-    },
-  ],
+  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
 
-  /* Shared settings for all the projects */
   use: {
-    /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: 'http://localhost:5174',
-    
-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
+    baseURL,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
   },
 
-  /* Run your local dev server before starting the tests */
-  webServer: {
-    command: 'npm run dev & cd .. && node src/server.js',
-    url: 'http://localhost:5174',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
-  },
-};
-
-export default config;
+  webServer: useApi ? [api, vite] : [vite],
+});

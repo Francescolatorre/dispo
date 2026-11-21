@@ -6,8 +6,8 @@
  * lists every employee-week whose utilization changes (before/after).
  *
  * Every applied write pushes an operation onto an undo stack. Undoing a delete re-creates
- * the entity through the repository, which assigns a NEW id; an alias table maps old ids to
- * new ones so older history entries keep working.
+ * the entity (and any cascaded assignments) with its ORIGINAL id — repositories accept
+ * client-supplied ids — so older history entries keep referring to the right records.
  */
 import type { Repository } from '../data/repository';
 import { addWeeks, listWeeks, maxISODate, minISODate } from './dates';
@@ -226,7 +226,6 @@ export function createPlanningActions(
   const historyLimit = options.historyLimit ?? 100;
   const past: HistoryEntry[] = [];
   const future: HistoryEntry[] = [];
-  const aliases = new Map<string, string>();
   let queue: Promise<unknown> = Promise.resolve();
 
   /** Runs writes strictly one after another so state reads and history stay consistent. */
@@ -236,37 +235,14 @@ export function createPlanningActions(
     return run;
   }
 
-  const resolve = (id: string): string => {
-    let current = id;
-    const seen = new Set<string>();
-    while (aliases.has(current) && !seen.has(current)) {
-      seen.add(current);
-      current = aliases.get(current) as string;
-    }
-    return current;
-  };
-
-  const resolveRefs = (data: Data): Data => {
-    const out = { ...data };
-    if (typeof out.employeeId === 'string') out.employeeId = resolve(out.employeeId);
-    if (typeof out.projectId === 'string') out.projectId = resolve(out.projectId);
-    return out;
-  };
-
   async function applyOp(op: Op): Promise<void> {
-    const id = resolve(op.id);
+    const { id } = op;
     if (op.type === 'create') {
-      const data = resolveRefs(op.data);
-      let created: { id: string };
-      if (op.entity === 'employee') created = await repo.createEmployee(data as unknown as EmployeeInput);
-      else if (op.entity === 'project') created = await repo.createProject(data as unknown as ProjectInput);
-      else created = await repo.createAssignment(data as unknown as AssignmentInput);
-      if (created.id !== id) aliases.set(id, created.id);
-      for (const a of op.cascade ?? []) {
-        const restored = await repo.createAssignment(resolveRefs(withoutId(a)) as unknown as AssignmentInput);
-        const oldId = resolve(a.id);
-        if (restored.id !== oldId) aliases.set(oldId, restored.id);
-      }
+      const data = { ...op.data, id };
+      if (op.entity === 'employee') await repo.createEmployee(data as unknown as EmployeeInput);
+      else if (op.entity === 'project') await repo.createProject(data as unknown as ProjectInput);
+      else await repo.createAssignment(data as unknown as AssignmentInput);
+      for (const a of op.cascade ?? []) await repo.createAssignment(a);
       return;
     }
     if (op.type === 'delete') {
@@ -275,7 +251,7 @@ export function createPlanningActions(
       else await repo.deleteAssignment(id);
       return;
     }
-    const patch = resolveRefs(op.patch);
+    const patch = op.patch;
     if (op.entity === 'employee') await repo.updateEmployee(id, patch as EmployeeUpdate);
     else if (op.entity === 'project') await repo.updateProject(id, patch as ProjectUpdate);
     else await repo.updateAssignment(id, patch as AssignmentUpdate);
@@ -562,7 +538,6 @@ export function createPlanningActions(
     clearHistory: () => {
       past.length = 0;
       future.length = 0;
-      aliases.clear();
     },
   };
 

@@ -1,5 +1,7 @@
 import { act, render, renderHook, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import type { ResolvedDataSource } from '../data/dataSource';
+import { HttpRepository } from '../data/httpRepository';
 import { LocalRepository } from '../data/localRepository';
 import type { Repository } from '../data/repository';
 import { addDays, addWeeks, startOfISOWeek, todayISO } from '../domain/dates';
@@ -75,5 +77,67 @@ describe('PlanningProvider', () => {
     );
     expect(screen.getByText('child')).toBeInTheDocument();
     await act(async () => {}); // let the initial load settle
+  });
+});
+
+describe('PlanningProvider – data source', () => {
+  it('labels an explicit repository (local by default, api for HttpRepository)', async () => {
+    const local = renderHook(() => usePlanning(), { wrapper: wrapperFor(new LocalRepository({ storage: null })) });
+    expect(local.result.current.dataSource).toBe('local');
+    await waitFor(() => expect(local.result.current.loading).toBe(false));
+
+    const fetch = vi.fn(async () => new Response('[]', { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    const http = new HttpRepository({ fetch });
+    const api = renderHook(() => usePlanning(), { wrapper: wrapperFor(http) });
+    expect(api.result.current.dataSource).toBe('api');
+    await waitFor(() => expect(api.result.current.loading).toBe(false));
+    expect(api.result.current.employees).toEqual([]);
+  });
+
+  it('resolves the data source asynchronously and loads through it', async () => {
+    let finish!: (r: ResolvedDataSource) => void;
+    const resolveDataSource = vi.fn(() => new Promise<ResolvedDataSource>((r) => (finish = r)));
+    const { result } = renderHook(() => usePlanning(), {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <PlanningProvider resolveDataSource={resolveDataSource}>{children}</PlanningProvider>
+      ),
+    });
+    expect(result.current.dataSource).toBeNull();
+    expect(result.current.loading).toBe(true);
+    await act(async () => finish({ source: 'api', repository: new LocalRepository({ storage: null }) }));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.dataSource).toBe('api');
+    expect(result.current.employees).toHaveLength(14);
+    expect(resolveDataSource).toHaveBeenCalledTimes(1);
+  });
+
+  it('surfaces a failed data-source resolution as error', async () => {
+    const { result } = renderHook(() => usePlanning(), {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <PlanningProvider resolveDataSource={() => Promise.reject(new Error('Server nicht erreichbar'))}>
+          {children}
+        </PlanningProvider>
+      ),
+    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.error?.message).toBe('Server nicht erreichbar');
+    expect(result.current.dataSource).toBeNull();
+  });
+
+  it('resetDemoData reseeds and clears the undo history', async () => {
+    const repo = new LocalRepository({ storage: null });
+    const { result } = renderHook(() => usePlanning(), { wrapper: wrapperFor(repo) });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await act(async () => {
+      expect((await result.current.actions.deleteEmployee('emp-01')).ok).toBe(true);
+    });
+    expect(result.current.employees).toHaveLength(13);
+    expect(result.current.canUndo).toBe(true);
+    await act(async () => {
+      await result.current.resetDemoData();
+    });
+    expect(result.current.employees).toHaveLength(14);
+    expect(result.current.assignments).toHaveLength(30);
+    expect(result.current.canUndo).toBe(false);
   });
 });

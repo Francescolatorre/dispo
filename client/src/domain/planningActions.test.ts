@@ -175,11 +175,11 @@ describe('undo / redo', () => {
     expectOk(d);
     expect(await repo.listAssignments()).toEqual(initial);
 
-    // undo delete → re-created (new id, alias keeps history working)
+    // undo delete → re-created with its ORIGINAL id
     expect(await actions.undo()).toEqual({ ok: true, label: 'Einsatz löschen' });
     let felix = await repo.listAssignments({ employeeId: FELIX, from: mon(4) });
     expect(felix).toHaveLength(1);
-    expect(felix[0]).toMatchObject({ allocation: 80 });
+    expect(felix[0]).toMatchObject({ id: c.result.id, allocation: 80 });
     expect(felix[0].role).toBeUndefined();
 
     // undo update → allocation and role restored on the re-created assignment
@@ -200,7 +200,7 @@ describe('undo / redo', () => {
     await actions.redo();
     felix = await repo.listAssignments({ employeeId: FELIX, from: mon(4) });
     expect(felix).toHaveLength(1);
-    expect(felix[0]).toMatchObject({ allocation: 80 });
+    expect(felix[0]).toMatchObject({ id: c.result.id, allocation: 80 });
     await actions.redo();
     expect(await repo.listAssignments()).toEqual(initial);
     expect(actions.canRedo()).toBe(false);
@@ -224,13 +224,11 @@ describe('undo / redo', () => {
 
     await actions.undo();
     const lukas = (await repo.listEmployees()).find((e) => e.name === 'Lukas Müller');
-    expect(lukas).toBeDefined();
-    const restored = await repo.listAssignments({ employeeId: lukas!.id });
-    expect(restored.map(({ projectId, start, end, allocation }) => ({ projectId, start, end, allocation }))).toEqual(
-      before.map(({ projectId, start, end, allocation }) => ({ projectId, start, end, allocation })),
-    );
+    expect(lukas?.id).toBe(LUKAS);
+    // employee and cascaded assignments come back with their original ids and data
+    expect(await repo.listAssignments({ employeeId: LUKAS })).toEqual(before);
 
-    // redo deletes the re-created employee (via alias) including cascade
+    // redo deletes the re-created employee including cascade
     await actions.redo();
     expect((await repo.listEmployees()).some((e) => e.name === 'Lukas Müller')).toBe(false);
   });
@@ -244,7 +242,22 @@ describe('undo / redo', () => {
     expect(r.impact.every((i) => i.after < i.before)).toBe(true);
     await actions.undo();
     expect(await repo.listAssignments()).toHaveLength(countBefore);
-    expect((await repo.listProjects()).some((p) => p.name === 'Website-Relaunch')).toBe(true);
+    expect((await repo.listProjects()).find((p) => p.name === 'Website-Relaunch')?.id).toBe(WEBSITE);
+    expect((await repo.listAssignments({ projectId: WEBSITE })).length).toBeGreaterThan(0);
+  });
+
+  it('keeps ids across delete → undo → update → undo → redo chains', async () => {
+    const { repo, actions } = setup();
+    const target = (await repo.listAssignments({ employeeId: LUKAS }))[0];
+    expectOk(await actions.deleteEmployee(LUKAS));
+    await actions.undo(); // employee + assignments back with original ids
+    expectOk(await actions.updateAssignment(target.id, { allocation: 10 }));
+    expectOk(await actions.deleteAssignment(target.id));
+    await actions.undo(); // assignment back (allocation 10)
+    await actions.undo(); // allocation restored
+    expect((await repo.listAssignments()).find((a) => a.id === target.id)).toEqual(target);
+    await actions.redo();
+    expect((await repo.listAssignments()).find((a) => a.id === target.id)?.allocation).toBe(10);
   });
 
   it('respects the history limit', async () => {

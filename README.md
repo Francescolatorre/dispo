@@ -128,6 +128,25 @@ npm run lint
 npm run db:down         # stops the container, keeps the data volume
 ```
 
+### Client data source
+
+The client picks its data source at startup via `VITE_DATA_SOURCE` (see `client/.env.example`):
+`auto` (default) probes `GET /api/health` (1.5 s timeout) and uses the API if it answers, otherwise
+the browser (`localStorage`); `api` / `local` force one side. The Vite dev server proxies `/api` to
+`http://localhost:3001`. With the API active and an empty database, the demo seed is written once
+(fixed ids `emp-01`, `prj-01`, …). The sidebar footer shows the active source
+("Datenquelle: Server" / "Lokal (Browser)"). Vitest runs with `VITE_DATA_SOURCE=local` (`client/.env.test`).
+
+Integration check of the client against a running API (creates and removes its own records):
+
+```bash
+npm start                                   # repo root, API on :3001
+cd client && DISPO_API_IT=1 npx vitest run src/data/httpRepository.integration.test.ts
+```
+
+E2E (`client/playwright.config.ts`): by default only the Vite dev server in local mode;
+`E2E_DATA_SOURCE=api` also starts `node server/index.js` and pins the client to the API.
+
 ## Project Structure
 
 ```

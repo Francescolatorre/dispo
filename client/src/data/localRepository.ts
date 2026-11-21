@@ -16,7 +16,14 @@ import type {
   ProjectInput,
   ProjectUpdate,
 } from '../domain/types';
-import { NotFoundError, type AssignmentQuery, type Repository } from './repository';
+import {
+  ConflictError,
+  NotFoundError,
+  type AssignmentQuery,
+  type EntityName,
+  type Repository,
+  type WithOptionalId,
+} from './repository';
 import { createSeed } from './seed';
 
 export const STORAGE_KEY = 'dispo.v1';
@@ -91,8 +98,8 @@ export class LocalRepository implements Repository {
     return this.data.employees.map((e) => ({ ...e }));
   }
 
-  async createEmployee(input: EmployeeInput): Promise<Employee> {
-    const employee: Employee = { ...input, id: this.generateId('emp') };
+  async createEmployee(input: WithOptionalId<EmployeeInput>): Promise<Employee> {
+    const employee: Employee = { ...input, id: this.takeId('employee', this.data.employees, input.id) };
     this.data.employees.push(employee);
     this.persist();
     return { ...employee };
@@ -120,8 +127,8 @@ export class LocalRepository implements Repository {
     return this.data.projects.map((p) => ({ ...p }));
   }
 
-  async createProject(input: ProjectInput): Promise<Project> {
-    const project: Project = { ...input, id: this.generateId('prj') };
+  async createProject(input: WithOptionalId<ProjectInput>): Promise<Project> {
+    const project: Project = { ...input, id: this.takeId('project', this.data.projects, input.id) };
     this.data.projects.push(project);
     this.persist();
     return { ...project };
@@ -157,8 +164,9 @@ export class LocalRepository implements Repository {
       .map((a) => ({ ...a }));
   }
 
-  async createAssignment(input: AssignmentInput): Promise<Assignment> {
-    const assignment: Assignment = { ...definedOnly(input), id: this.generateId('asg') } as Assignment;
+  async createAssignment(input: WithOptionalId<AssignmentInput>): Promise<Assignment> {
+    const id = this.takeId('assignment', this.data.assignments, input.id);
+    const assignment: Assignment = { ...definedOnly(input), id } as Assignment;
     this.data.assignments.push(assignment);
     this.persist();
     return { ...assignment };
@@ -183,6 +191,19 @@ export class LocalRepository implements Repository {
   }
 
   // ---- internals -------------------------------------------------------------------------
+
+  /** Returns the client-supplied id (rejecting duplicates) or a freshly generated one. */
+  private takeId(entity: EntityName, existing: ReadonlyArray<{ id: string }>, requested: string | undefined): string {
+    if (requested === undefined) {
+      const prefix = entity === 'employee' ? 'emp' : entity === 'project' ? 'prj' : 'asg';
+      let id = this.generateId(prefix);
+      // Generated ids could collide with client-supplied ones; draw again in that (rare) case.
+      while (existing.some((x) => x.id === id)) id = this.generateId(prefix);
+      return id;
+    }
+    if (existing.some((x) => x.id === requested)) throw new ConflictError(entity, requested);
+    return requested;
+  }
 
   private seedData(): PlanningData {
     return this.seedFn(this.today ?? todayISO());

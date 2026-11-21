@@ -1,5 +1,6 @@
-import { Box, Link, Text, VStack } from '@chakra-ui/react';
+import { Box, Flex, Link, Text, VStack } from '@chakra-ui/react';
 import { NavLink } from 'react-router-dom';
+import { usePlanning } from '../../state';
 
 const navItems = [
   { to: '/', label: 'Planung' },
@@ -7,10 +8,29 @@ const navItems = [
   { to: '/projects', label: 'Projekte' },
 ] as const;
 
+const SOURCE_LABEL = { api: 'Server', local: 'Lokal (Browser)' } as const;
+const SOURCE_HINT = {
+  api: 'Daten werden über die API in Postgres gespeichert',
+  local: 'Daten liegen nur in diesem Browser (localStorage)',
+} as const;
+
+/** Unobtrusive footer hint showing the active data source (API vs. browser storage). */
+const DataSourceIndicator = () => {
+  const { dataSource } = usePlanning();
+  if (!dataSource) return null;
+  return (
+    <Flex data-testid="data-source" align="center" gap={2} px={3} fontSize="xs" color="gray.500" title={SOURCE_HINT[dataSource]}>
+      <Box as="span" w={2} h={2} borderRadius="full" bg={dataSource === 'api' ? 'green.400' : 'gray.400'} aria-hidden />
+      Datenquelle: {SOURCE_LABEL[dataSource]}
+    </Flex>
+  );
+};
+
 export const Navigation = () => (
-  <Box
+  <Flex
     as="nav"
     aria-label="Hauptnavigation"
+    direction="column"
     w="48"
     flexShrink={0}
     h="100vh"
@@ -47,5 +67,8 @@ export const Navigation = () => (
         </Box>
       ))}
     </VStack>
-  </Box>
+    <Box mt="auto" pt={4}>
+      <DataSourceIndicator />
+    </Box>
+  </Flex>
 );

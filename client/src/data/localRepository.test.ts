@@ -1,5 +1,5 @@
 import { LocalRepository, STORAGE_KEY, type StorageLike } from './localRepository';
-import { NotFoundError } from './repository';
+import { ConflictError, NotFoundError } from './repository';
 
 class MemoryStorage implements StorageLike {
   map = new Map<string, string>();
@@ -114,5 +114,58 @@ describe('LocalRepository', () => {
     await expect(repo.updateEmployee('nope', { name: 'x' })).rejects.toBeInstanceOf(NotFoundError);
     await expect(repo.deleteProject('nope')).rejects.toBeInstanceOf(NotFoundError);
     await expect(repo.deleteAssignment('nope')).rejects.toThrow('assignment "nope" not found');
+  });
+
+  it('honours client-supplied ids and rejects duplicates with ConflictError', async () => {
+    const storage = new MemoryStorage();
+    const repo = new LocalRepository({ storage, today: TODAY });
+    const e = await repo.createEmployee({ id: 'emp-x', name: 'X', role: 'QA', seniority: 'mid', capacity: 1, active: true });
+    expect(e.id).toBe('emp-x');
+    const p = await repo.createProject({
+      id: 'prj-x',
+      name: 'P',
+      color: 'red',
+      start: '2026-12-01',
+      end: '2026-12-31',
+      status: 'planned',
+    });
+    const a = await repo.createAssignment({
+      id: 'asg-x',
+      employeeId: e.id,
+      projectId: p.id,
+      start: '2026-12-01',
+      end: '2026-12-04',
+      allocation: 50,
+    });
+    expect(a).toEqual({
+      id: 'asg-x',
+      employeeId: 'emp-x',
+      projectId: 'prj-x',
+      start: '2026-12-01',
+      end: '2026-12-04',
+      allocation: 50,
+    });
+    // persisted with the given ids
+    await expect(new LocalRepository({ storage, today: TODAY }).listAssignments({ employeeId: 'emp-x' })).resolves.toHaveLength(1);
+
+    const dup = await repo.createEmployee({ id: 'emp-01', name: 'Dup', role: 'QA', seniority: 'mid', capacity: 1, active: true }).catch((err: unknown) => err);
+    expect(dup).toBeInstanceOf(ConflictError);
+    expect(dup).toMatchObject({ entity: 'employee', id: 'emp-01' });
+    await expect(repo.createProject({ ...p })).rejects.toBeInstanceOf(ConflictError);
+    await expect(repo.createAssignment({ ...a })).rejects.toThrow('assignment "asg-x" already exists');
+    expect((await repo.listEmployees()).filter((x) => x.id === 'emp-01')).toHaveLength(1);
+  });
+
+  it('generated ids never collide with existing ones', async () => {
+    const ids = ['asg-01', 'asg-01', 'asg-fresh'];
+    const repo = new LocalRepository({ storage: null, today: TODAY, generateId: () => ids.shift() as string });
+    const a = await repo.createAssignment({
+      employeeId: 'emp-01',
+      projectId: 'prj-01',
+      start: '2026-12-01',
+      end: '2026-12-04',
+      allocation: 10,
+    });
+    expect(a.id).toBe('asg-fresh');
   });
 });
