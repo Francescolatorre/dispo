@@ -1,97 +1,51 @@
-import React from 'react';
-import {
-  Box,
-  VStack,
-  Link,
-  Text,
-  Icon,
-  Tooltip,
-} from '@chakra-ui/react';
-import { Link as RouterLink, useLocation } from 'react-router-dom';
-import {
-  ViewIcon,
-  TimeIcon,
-  CalendarIcon,
-  StarIcon,
-  SettingsIcon,
-} from '@chakra-ui/icons';
+import { Box, Link, Text, VStack } from '@chakra-ui/react';
+import { NavLink } from 'react-router-dom';
 
-interface NavItemProps {
-  to: string;
-  icon: React.ElementType;
-  label: string;
-  isActive: boolean;
-}
+const navItems = [
+  { to: '/', label: 'Planung' },
+  { to: '/people', label: 'Personen' },
+  { to: '/projects', label: 'Projekte' },
+] as const;
 
-const NavItem: React.FC<NavItemProps> = ({ to, icon, label, isActive }) => (
-  <Tooltip label={label} placement="right" hasArrow>
-    <Link
-      as={RouterLink}
-      to={to}
-      _hover={{ textDecoration: 'none' }}
-      w="full"
-      data-testid={`nav-${label.toLowerCase()}`}
-    >
-      <Box
-        py={3}
-        px={4}
-        bg={isActive ? 'blue.500' : 'transparent'}
-        color={isActive ? 'white' : 'gray.600'}
-        _hover={{
-          bg: isActive ? 'blue.600' : 'gray.100',
-        }}
-        borderRadius="md"
-      >
-        <Icon as={icon} boxSize={5} />
-        <Text
-          display={{ base: 'none', lg: 'block' }}
-          ml={{ lg: 3 }}
-          fontSize="sm"
-        >
-          {label}
-        </Text>
-      </Box>
-    </Link>
-  </Tooltip>
-);
-
-export const Navigation: React.FC = () => {
-  const location = useLocation();
-
-  const navItems = [
-    { to: '/dashboard', icon: ViewIcon, label: 'Dashboard' },
-    { to: '/projects', icon: StarIcon, label: 'Projects' },
-    { to: '/employees', icon: SettingsIcon, label: 'Employees' },
-    { to: '/reports', icon: TimeIcon, label: 'Reports' },
-    { to: '/timeline-demo', icon: CalendarIcon, label: 'Timeline Demo' },
-  ];
-
-  return (
-    <Box
-      as="nav"
-      data-testid="main-navigation"
-      h="100vh"
-      w={{ base: '16', lg: '64' }}
-      py={5}
-      bg="white"
-      borderRight="1px"
-      borderColor="gray.200"
-      position="sticky"
-      top={0}
-    >
-      <VStack spacing={2} align="stretch" px={2}>
-        {navItems.map((item) => (
-          <NavItem
-            key={item.to}
+export const Navigation = () => (
+  <Box
+    as="nav"
+    aria-label="Hauptnavigation"
+    w="48"
+    flexShrink={0}
+    h="100vh"
+    position="sticky"
+    top={0}
+    bg="white"
+    borderRightWidth="1px"
+    borderColor="gray.200"
+    py={5}
+    px={3}
+  >
+    <Text fontWeight="bold" px={3} mb={6}>
+      DispoMVP
+    </Text>
+    <VStack as="ul" listStyleType="none" spacing={1} align="stretch" m={0} p={0}>
+      {navItems.map((item) => (
+        <Box as="li" key={item.to}>
+          <Link
+            as={NavLink}
             to={item.to}
-            icon={item.icon}
-            label={item.label}
-            isActive={location.pathname === item.to}
-          />
-        ))}
-      </VStack>
-    </Box>
-  );
-};
-
-export default Navigation;
+            end={item.to === '/'}
+            display="block"
+            px={3}
+            py={2}
+            borderRadius="md"
+            fontSize="sm"
+            fontWeight="medium"
+            color="gray.700"
+            _hover={{ bg: 'gray.100', textDecoration: 'none' }}
+            _activeLink={{ bg: 'blue.500', color: 'white' }}
+          >
+            {item.label}
+          </Link>
+        </Box>
+      ))}
+    </VStack>
+  </Box>
+);

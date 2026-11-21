@@ -1,6 +1,6 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
-import { resolve } from 'path';
+import { fileURLToPath } from 'node:url';
 
 export default defineConfig({
   plugins: [react()],
@@ -8,32 +8,17 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
-    include: ['src/**/*.{test,spec}.{js,jsx,ts,tsx}'],
-    environmentOptions: {
-      jsdom: {
-        url: 'http://localhost',
-        resources: 'usable',
-        runScripts: 'dangerously',
-      },
-    },
-    deps: {
-      inline: ['@chakra-ui/react', '@emotion/react', '@emotion/styled'],
-      fallbackCJS: true
-    },
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    // Playwright e2e specs live in ./tests and run via `npm run test:e2e`, never in vitest.
+    exclude: ['node_modules/**', 'dist/**', 'tests/**'],
     coverage: {
-      reporter: ['text', 'json', 'html'],
-      exclude: [
-        'node_modules/',
-        'src/test/',
-        '**/*.d.ts',
-        '**/*.test.{js,jsx,ts,tsx}',
-        '**/*.spec.{js,jsx,ts,tsx}',
-      ],
+      reporter: ['text', 'html'],
+      exclude: ['src/test/**', '**/*.d.ts', '**/*.test.{ts,tsx}'],
     },
   },
   resolve: {
     alias: {
-      '@': resolve(__dirname, './src'),
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
 });

@@ -1,24 +1,12 @@
-import { Box } from '@chakra-ui/react';
+import { Box, Flex } from '@chakra-ui/react';
+import { Outlet } from 'react-router-dom';
 import { Navigation } from './Navigation';
 
-interface LayoutProps {
-  children: React.ReactNode;
-}
-
-export const Layout = ({ children }: LayoutProps) => {
-  return (
-    <Box display="flex">
-      <Navigation />
-      <Box
-        as="main"
-        role="main"
-        flexGrow={1}
-        p={4}
-        width="100%"
-        boxSizing="border-box"
-      >
-        {children}
-      </Box>
+export const Layout = () => (
+  <Flex minH="100vh" bg="gray.50">
+    <Navigation />
+    <Box as="main" flex={1} minW={0} p={6}>
+      <Outlet />
     </Box>
-  );
-};
+  </Flex>
+);
