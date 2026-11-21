@@ -51,9 +51,31 @@ const Slider = defineSliderStyleConfig({
   }),
 });
 
+/**
+ * Semantic colours of the planning board. Workload tints stay subtle so project bars remain
+ * readable on top of them; only "over" is clearly visible (and always paired with an icon).
+ */
+const semanticTokens = {
+  colors: {
+    load: {
+      free: { bg: 'green.50', fg: 'green.700', swatch: 'green.100' },
+      ok: { bg: 'white', fg: 'gray.500', swatch: 'gray.100' },
+      warning: { bg: 'orange.50', fg: 'orange.700', swatch: 'orange.100' },
+      over: { bg: 'red.100', fg: 'red.700', swatch: 'red.200' },
+    },
+    board: {
+      line: 'gray.100',
+      lineStrong: 'gray.200',
+      currentWeek: 'blue.50',
+      today: 'blue.500',
+    },
+  },
+};
+
 /** The single Chakra theme of the app. */
 const theme = extendTheme({
   config,
+  semanticTokens,
   components: {
     Button,
     Input,
