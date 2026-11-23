@@ -41,6 +41,10 @@ describe('PeopleView', () => {
     const jonas = within(rowOf('Jonas Fischer')).getByTestId('utilization-strip');
     expect([...jonas.querySelectorAll('[data-status]')].slice(0, 2).map((b) => b.getAttribute('data-status'))).toEqual(['over', 'over']);
     expect(rowOf('Anna Schmidt')).toHaveTextContent('frei ab sofort');
+    expect(within(rowOf('Anna Schmidt')).getByRole('link', { name: 'Anna Schmidt im Board zeigen' })).toHaveAttribute(
+      'href',
+      '/?q=Anna%20Schmidt',
+    );
   });
 
   it('filters by search, role and inactive toggle', async () => {

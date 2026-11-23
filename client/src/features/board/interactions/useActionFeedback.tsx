@@ -15,7 +15,7 @@ export function useActionFeedback() {
   const { actions, employees, assignments } = usePlanning();
 
   const show = useCallback(
-    (title: string, messages: readonly string[], tone: Tone, onUndo?: () => void, duration = 6000) => {
+    (title: string, messages: readonly string[], tone: Tone, onUndo?: () => void, duration = 8000) => {
       toast({
         position: 'bottom',
         duration,

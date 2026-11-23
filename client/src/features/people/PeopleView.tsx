@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
 import {
-  Badge,
   Box,
   Button,
   Flex,
   FormControl,
   FormLabel,
   HStack,
+  IconButton,
   Input,
   InputGroup,
   InputLeftElement,
@@ -18,14 +18,16 @@ import {
   Text,
   Th,
   Thead,
+  Tooltip,
   Tr,
 } from '@chakra-ui/react';
+import { Link as RouterLink } from 'react-router-dom';
 import { todayISO } from '../../domain/dates';
 import type { Employee, ISODate } from '../../domain/types';
 import { usePlanning } from '../../state';
-import { EmptyState, ListSkeleton, LoadError, PageHeader } from '../shared/components';
+import { Avatar, EmptyState, Frame, ListSkeleton, LoadError, PageHeader } from '../shared/components';
 import { formatCapacity, formatWeekKey, SENIORITY_LABELS } from '../shared/format';
-import { PlusIcon, SearchIcon } from '../shared/icons';
+import { BoardLinkIcon, PlusIcon, SearchIcon } from '../shared/icons';
 import { PersonDrawer } from './PersonDrawer';
 import {
   computeOutlook,
@@ -67,9 +69,9 @@ function Availability({ outlook, active }: { outlook: PersonOutlook; active: boo
     );
   }
   return (
-    <Text fontSize="sm" color={f.now ? 'green.700' : 'gray.700'} whiteSpace="nowrap">
+    <Text fontSize="sm" color={f.now ? 'load.free.fg' : 'gray.800'} fontWeight={f.now ? 500 : 400} whiteSpace="nowrap">
       {f.now ? 'frei ab sofort' : `frei ab ${formatWeekKey(f.weekKey)}`}
-      <Text as="span" color="gray.500">
+      <Text as="span" color="gray.500" fontFamily="mono" fontSize="xs">
         {' '}
         · {Math.round(f.freePercent)} %
       </Text>
@@ -97,7 +99,7 @@ export function PeopleView({ today: todayProp }: PeopleViewProps) {
 
   const openCreate = () => setDrawer({ open: true, employee: null });
   const addButton = (
-    <Button leftIcon={<PlusIcon boxSize={3.5} />} size="sm" onClick={openCreate} aria-label="Person anlegen">
+    <Button leftIcon={<PlusIcon boxSize="14px" />} onClick={openCreate} aria-label="Person anlegen">
       Person
     </Button>
   );
@@ -109,21 +111,21 @@ export function PeopleView({ today: todayProp }: PeopleViewProps) {
     content = <ListSkeleton label="Personen werden geladen" />;
   } else if (employees.length === 0) {
     content = (
-      <Box bg="white" borderWidth="1px" borderColor="gray.200" borderRadius="lg">
+      <Frame>
         <EmptyState
           title="Noch keine Personen"
           text="Lege die erste Person an, um sie im Board einplanen zu können."
           action={addButton}
         />
-      </Box>
+      </Frame>
     );
   } else {
     content = (
       <>
-        <Flex gap={3} align="center" wrap="wrap" mb={4}>
-          <InputGroup size="sm" w={{ base: 'full', md: '240px' }}>
-            <InputLeftElement pointerEvents="none" color="gray.400">
-              <SearchIcon boxSize={3.5} />
+        <Flex gap={2} align="center" wrap="wrap" mb={3}>
+          <InputGroup w={{ base: 'full', md: '240px' }}>
+            <InputLeftElement pointerEvents="none" color="gray.500" h="32px">
+              <SearchIcon boxSize="14px" />
             </InputLeftElement>
             <Input
               type="search"
@@ -135,10 +137,8 @@ export function PeopleView({ today: todayProp }: PeopleViewProps) {
             />
           </InputGroup>
           <Select
-            size="sm"
             w="auto"
             minW="150px"
-            bg="white"
             aria-label="Rolle filtern"
             value={filters.role}
             onChange={(e) => setFilters((f) => ({ ...f, role: e.target.value }))}
@@ -150,7 +150,7 @@ export function PeopleView({ today: todayProp }: PeopleViewProps) {
               </option>
             ))}
           </Select>
-          <FormControl display="flex" alignItems="center" w="auto">
+          <FormControl display="flex" alignItems="center" w="auto" ml={2}>
             <Switch
               id="people-show-inactive"
               size="sm"
@@ -158,49 +158,54 @@ export function PeopleView({ today: todayProp }: PeopleViewProps) {
               isChecked={filters.showInactive}
               onChange={(e) => setFilters((f) => ({ ...f, showInactive: e.target.checked }))}
             />
-            <FormLabel htmlFor="people-show-inactive" mb={0} ml={2} fontSize="sm" fontWeight="normal">
+            <FormLabel htmlFor="people-show-inactive" mb={0} ml={2} fontSize="sm" fontWeight={400} color="gray.700">
               Inaktive zeigen
             </FormLabel>
           </FormControl>
           <HStack spacing={3} ml="auto">
-            <Text fontSize="sm" color="gray.500" data-testid="people-count" aria-live="polite">
+            <Text fontSize="xs" color="gray.500" data-testid="people-count" aria-live="polite">
               {visible.length} von {totalCount} Personen
             </Text>
             {filtered && (
-              <Button size="sm" variant="ghost" colorScheme="gray" onClick={() => setFilters((f) => ({ ...DEFAULT_PEOPLE_FILTERS, showInactive: f.showInactive }))}>
+              <Button variant="ghost" color="accent.600" onClick={() => setFilters((f) => ({ ...DEFAULT_PEOPLE_FILTERS, showInactive: f.showInactive }))}>
                 Filter zurücksetzen
               </Button>
             )}
           </HStack>
         </Flex>
 
-        <Box bg="white" borderWidth="1px" borderColor="gray.200" borderRadius="lg" overflowX="auto">
+        <Frame overflowX="auto">
           {visible.length === 0 ? (
             <EmptyState
               title="Keine Personen gefunden"
               text="Passe Suche oder Rollenfilter an."
               action={
-                <Button size="sm" variant="outline" colorScheme="gray" onClick={() => setFilters(DEFAULT_PEOPLE_FILTERS)}>
+                <Button variant="outline" onClick={() => setFilters(DEFAULT_PEOPLE_FILTERS)}>
                   Filter zurücksetzen
                 </Button>
               }
             />
           ) : (
-            <Table size="sm" aria-label="Personen">
-              <Thead>
+            <Table size="md" aria-label="Personen">
+              <Thead position="sticky" top={0} zIndex={1}>
                 <Tr>
-                  <Th py={3} color="gray.500">Person</Th>
-                  <Th py={3} color="gray.500" isNumeric>Kapazität</Th>
-                  <Th py={3} color="gray.500">
+                  <Th>Person</Th>
+                  <Th isNumeric>Kapazität</Th>
+                  <Th>
                     Auslastung {stripWeeks.length > 0 && `${formatWeekKey(stripWeeks[0].weekKey)} – ${formatWeekKey(stripWeeks[stripWeeks.length - 1].weekKey)}`}
                     <Text as="span" srOnly>
                       {' '}
                       (nächste {STRIP_WEEKS} Wochen)
                     </Text>
                   </Th>
-                  <Th py={3} color="gray.500">Verfügbar</Th>
-                  <Th py={3} color="gray.500">Status</Th>
-                  <Th py={3} color="gray.500" isNumeric>Einsätze</Th>
+                  <Th>Verfügbar</Th>
+                  <Th>Status</Th>
+                  <Th isNumeric>Einsätze</Th>
+                  <Th w="56px">
+                    <Text as="span" srOnly>
+                      Aktionen
+                    </Text>
+                  </Th>
                 </Tr>
               </Thead>
               <Tbody>
@@ -209,66 +214,81 @@ export function PeopleView({ today: todayProp }: PeopleViewProps) {
                     key={e.id}
                     data-employee-id={e.id}
                     cursor="pointer"
-                    _hover={{ bg: 'gray.50' }}
+                    transition="background 100ms"
+                    _hover={{ bg: 'rgba(21,24,32,0.03)' }}
+                    bg={drawer.open && drawer.employee?.id === e.id ? 'accent.50' : undefined}
                     onClick={() => setDrawer({ open: true, employee: e })}
-                    opacity={e.active ? 1 : 0.6}
                   >
-                    <Td py={2.5} borderColor="gray.100">
-                      <Button
-                        variant="link"
-                        colorScheme="gray"
-                        color="gray.800"
-                        fontWeight="semibold"
-                        fontSize="sm"
-                        aria-label={`${e.name} bearbeiten`}
-                        onClick={(ev) => {
-                          ev.stopPropagation();
-                          setDrawer({ open: true, employee: e });
-                        }}
-                      >
-                        {e.name}
-                      </Button>
-                      <Text fontSize="xs" color="gray.500">
-                        {e.role} · {SENIORITY_LABELS[e.seniority]}
+                    <Td py={1.5}>
+                      <HStack spacing={2.5}>
+                        <Avatar name={e.name} muted={!e.active} />
+                        <Box minW={0}>
+                          <Button
+                            variant="link"
+                            color={e.active ? 'gray.900' : 'gray.500'}
+                            fontWeight={600}
+                            fontSize="sm"
+                            aria-label={`${e.name} bearbeiten`}
+                            onClick={(ev) => {
+                              ev.stopPropagation();
+                              setDrawer({ open: true, employee: e });
+                            }}
+                          >
+                            {e.name}
+                          </Button>
+                          <Text fontSize="xs" color="gray.500">
+                            {e.role} · {SENIORITY_LABELS[e.seniority]}
+                          </Text>
+                        </Box>
+                      </HStack>
+                    </Td>
+                    <Td isNumeric>
+                      <Text as="span" fontFamily="mono" fontSize="sm" color={e.capacity < 1 ? 'gray.900' : 'gray.500'}>
+                        {formatCapacity(e.capacity)}
                       </Text>
                     </Td>
-                    <Td py={2.5} borderColor="gray.100" isNumeric>
-                      {e.capacity < 1 ? (
-                        <Badge colorScheme="purple" variant="subtle" fontSize="11px">
-                          {formatCapacity(e.capacity)}
-                        </Badge>
-                      ) : (
-                        <Text as="span" fontSize="sm" color="gray.600">
-                          {formatCapacity(e.capacity)}
+                    <Td>{outlook[e.id] && <UtilizationStrip loads={outlook[e.id].strip} name={e.name} />}</Td>
+                    <Td>{outlook[e.id] && <Availability outlook={outlook[e.id]} active={e.active} />}</Td>
+                    <Td>
+                      <HStack spacing={1.5}>
+                        <Box
+                          boxSize="6px"
+                          borderRadius="full"
+                          bg={e.active ? 'gray.700' : 'transparent'}
+                          borderWidth="1px"
+                          borderColor={e.active ? 'gray.700' : 'gray.400'}
+                        />
+                        <Text fontSize="sm" color={e.active ? 'gray.700' : 'gray.500'}>
+                          {e.active ? 'Aktiv' : 'inaktiv'}
                         </Text>
-                      )}
+                      </HStack>
                     </Td>
-                    <Td py={2.5} borderColor="gray.100">
-                      {outlook[e.id] && <UtilizationStrip loads={outlook[e.id].strip} name={e.name} />}
-                    </Td>
-                    <Td py={2.5} borderColor="gray.100">
-                      {outlook[e.id] && <Availability outlook={outlook[e.id]} active={e.active} />}
-                    </Td>
-                    <Td py={2.5} borderColor="gray.100">
-                      {e.active ? (
-                        <Text fontSize="sm" color="gray.600">Aktiv</Text>
-                      ) : (
-                        <Badge variant="outline" colorScheme="gray" fontSize="10px">
-                          inaktiv
-                        </Badge>
-                      )}
-                    </Td>
-                    <Td py={2.5} borderColor="gray.100" isNumeric>
-                      <Text as="span" fontSize="sm" color="gray.600">
+                    <Td isNumeric>
+                      <Text as="span" fontFamily="mono" fontSize="sm" color="gray.600">
                         {assignmentCounts.get(e.id) ?? 0}
                       </Text>
+                    </Td>
+                    <Td py={0} pr={2}>
+                      {e.active && (
+                        <Tooltip label="Im Board zeigen" openDelay={400}>
+                          <IconButton
+                            as={RouterLink}
+                            to={`/?q=${encodeURIComponent(e.name)}`}
+                            aria-label={`${e.name} im Board zeigen`}
+                            icon={<BoardLinkIcon boxSize="16px" />}
+                            variant="ghost"
+                            color="gray.500"
+                            onClick={(ev) => ev.stopPropagation()}
+                          />
+                        </Tooltip>
+                      )}
                     </Td>
                   </Tr>
                 ))}
               </Tbody>
             </Table>
           )}
-        </Box>
+        </Frame>
       </>
     );
   }

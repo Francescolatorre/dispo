@@ -58,6 +58,19 @@ function writeDensity(density: Density) {
   }
 }
 
+const NARROW_PX = 768;
+
+/** True below 768 px window width (no media-query subscription; a plain resize listener). */
+function useNarrowViewport(): boolean {
+  const [narrow, setNarrow] = useState(() => typeof window !== 'undefined' && window.innerWidth < NARROW_PX);
+  useEffect(() => {
+    const onResize = () => setNarrow(window.innerWidth < NARROW_PX);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return narrow;
+}
+
 export interface PlanningBoardProps {
   /** Reference day (default: today). Injected by tests. */
   today?: ISODate;
@@ -116,6 +129,8 @@ export function PlanningBoard({ today: todayProp, onAssignmentSelect }: Planning
   }, [assignments]);
 
   const metrics = rowMetricsFor(density);
+  // Phones/small windows: the narrower name column leaves room for the weeks.
+  const narrow = useNarrowViewport();
   const rowLayouts = useMemo(() => {
     const map = new Map<string, RowLayout>();
     for (const e of employees) map.set(e.id, layoutRow(geometry, assignmentsByEmployee.get(e.id) ?? [], metrics, expandedRows.has(e.id)));
@@ -413,7 +428,7 @@ export function PlanningBoard({ today: todayProp, onAssignmentSelect }: Planning
         currentWeekKey={isoWeekKey(today)}
         highlightProjectId={filters.projectId}
         metrics={metrics}
-        nameColumnWidth={NAME_COLUMN_WIDTHS[density]}
+        nameColumnWidth={narrow ? NAME_COLUMN_WIDTHS.compact : NAME_COLUMN_WIDTHS[density]}
         compact={density === 'compact'}
         expandedRows={expandedRows}
         onToggleExpanded={toggleExpanded}

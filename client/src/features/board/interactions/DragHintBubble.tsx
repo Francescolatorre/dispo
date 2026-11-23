@@ -2,9 +2,9 @@ import { Box, HStack, Portal, Text } from '@chakra-ui/react';
 import { AlertIcon } from '../icons';
 import type { DragHint } from './dragMath';
 
-const OFFSET = 16;
+const OFFSET = 12;
 
-/** Compact floating hint next to the pointer while dragging. */
+/** Ink chip next to the pointer while dragging; overbooking is flagged with ⚠ in the "over" tint (no red fill). */
 export function DragHintBubble({ hint, clientX, clientY }: { hint: DragHint; clientX: number; clientY: number }) {
   return (
     <Portal>
@@ -21,18 +21,22 @@ export function DragHintBubble({ hint, clientX, clientY }: { hint: DragHint; cli
         px={2.5}
         py={1.5}
         borderRadius="md"
-        boxShadow="lg"
+        boxShadow="md"
         fontSize="xs"
-        fontWeight="semibold"
+        fontWeight={500}
         whiteSpace="nowrap"
-        bg={hint.over ? 'red.600' : 'gray.800'}
+        bg="gray.900"
         color="white"
       >
-        <HStack spacing={1.5}>
-          {hint.over && <AlertIcon boxSize="12px" />}
-          <Text as="span">{hint.text}</Text>
-          {hint.over && <Text as="span" fontWeight="bold">· überbucht</Text>}
-        </HStack>
+        <Text as="span">{hint.text}</Text>
+        {hint.over && (
+          <HStack spacing={1} color="load.over.bg" mt={0.5}>
+            <AlertIcon boxSize="12px" />
+            <Text as="span" fontWeight={600}>
+              überbucht
+            </Text>
+          </HStack>
+        )}
       </Box>
     </Portal>
   );

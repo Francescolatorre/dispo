@@ -5,9 +5,6 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Alert,
-  AlertDescription,
-  AlertIcon,
   Badge,
   Box,
   Button,
@@ -37,6 +34,7 @@ import type { ActionResult } from '../../../domain/planningActions';
 import type { Assignment, AssignmentInput, AssignmentUpdate, ISODate } from '../../../domain/types';
 import { ALLOCATION_MAX, ALLOCATION_MIN, ALLOCATION_STEP } from '../../../domain/validation';
 import { usePlanning } from '../../../state';
+import { IssueList } from '../../shared/components';
 import { formatPercent } from '../boardModel';
 import { DEFAULT_CREATE_ALLOCATION, weekNumber } from './dragMath';
 import { useActionFeedback } from './useActionFeedback';
@@ -170,11 +168,11 @@ export function AssignmentDrawer({ editor, onClose }: AssignmentDrawerProps) {
   };
 
   return (
-    <Drawer isOpen placement="right" size="md" onClose={onClose}>
+    <Drawer isOpen placement="right" size="sm" onClose={onClose}>
       <DrawerOverlay />
       <DrawerContent data-testid="assignment-drawer">
         <DrawerCloseButton aria-label="Schließen" />
-        <DrawerHeader borderBottomWidth="1px">{isEdit ? 'Einsatz bearbeiten' : 'Einsatz anlegen'}</DrawerHeader>
+        <DrawerHeader>{isEdit ? 'Einsatz bearbeiten' : 'Einsatz anlegen'}</DrawerHeader>
         <DrawerBody>
           <Stack
             as="form"
@@ -241,18 +239,7 @@ export function AssignmentDrawer({ editor, onClose }: AssignmentDrawerProps) {
               </FormControl>
             </SimpleGrid>
 
-            {generalErrors.map((e) => (
-              <Alert key={e.message} status="error" borderRadius="md" fontSize="sm">
-                <AlertIcon />
-                <AlertDescription>{e.message}</AlertDescription>
-              </Alert>
-            ))}
-            {warnings.map((w) => (
-              <Alert key={w.message} status="warning" borderRadius="md" fontSize="sm">
-                <AlertIcon />
-                <AlertDescription>{w.message}</AlertDescription>
-              </Alert>
-            ))}
+            <IssueList errors={generalErrors} warnings={warnings} />
 
             <Box>
               <Text fontSize="sm" fontWeight="semibold" color="gray.700" mb={2}>
@@ -297,13 +284,13 @@ export function AssignmentDrawer({ editor, onClose }: AssignmentDrawerProps) {
             </Box>
           </Stack>
         </DrawerBody>
-        <DrawerFooter borderTopWidth="1px" gap={2}>
+        <DrawerFooter gap={2}>
           {isEdit && (
-            <Button colorScheme="red" variant="ghost" mr="auto" onClick={() => void remove()} isDisabled={busy}>
+            <Button variant="danger" mr="auto" onClick={() => void remove()} isDisabled={busy}>
               Löschen
             </Button>
           )}
-          <Button variant="outline" colorScheme="gray" onClick={onClose}>
+          <Button variant="outline" onClick={onClose}>
             Abbrechen
           </Button>
           <Button type="submit" form="assignment-form" isDisabled={!complete || errors.length > 0} isLoading={busy}>
@@ -317,7 +304,15 @@ export function AssignmentDrawer({ editor, onClose }: AssignmentDrawerProps) {
 
 function StatusBadge({ status, value }: { status: string; value: number }) {
   return (
-    <Badge bg={`load.${status}.bg`} color={`load.${status}.fg`} borderWidth="1px" borderColor={`load.${status}.strong`} fontSize="xs" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+    <Badge
+      bg={`load.${status}.bg`}
+      color={`load.${status}.fg`}
+      borderWidth="1px"
+      borderColor={status === 'ok' ? 'gray.200' : `load.${status}.strong`}
+      fontFamily="mono"
+      fontSize="2xs"
+      fontWeight={status === 'over' ? 700 : 500}
+    >
       {formatPercent(value)}
     </Badge>
   );

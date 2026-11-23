@@ -342,7 +342,8 @@ export function BoardGrid({
                 w={`${(currentWeekIndex < 0 ? (weeks[0].start < today ? weeks.length : 0) : currentWeekIndex) * columnWidth}px`}
                 bg="board.pastVeil"
                 pointerEvents="none"
-                zIndex={1}
+                // Over the heat, below the bars: a veiled half-label looked broken.
+                zIndex={0}
               />
             )}
           </Box>

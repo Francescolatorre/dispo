@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
 import {
-  Badge,
   Box,
   Button,
   Flex,
   HStack,
+  IconButton,
   Input,
   InputGroup,
   InputLeftElement,
@@ -15,14 +15,17 @@ import {
   Text,
   Th,
   Thead,
+  Tooltip,
   Tr,
 } from '@chakra-ui/react';
+import { Link as RouterLink } from 'react-router-dom';
 import { todayISO } from '../../domain/dates';
+import { projectColorTokens } from '../../domain/projectColors';
 import { PROJECT_STATUSES, type ISODate, type Project, type ProjectStatus } from '../../domain/types';
 import { usePlanning } from '../../state';
-import { EmptyState, ListSkeleton, LoadError, PageHeader } from '../shared/components';
+import { EmptyState, Frame, ListSkeleton, LoadError, PageHeader } from '../shared/components';
 import { formatDate, formatFte, PROJECT_STATUS_LABELS } from '../shared/format';
-import { PlusIcon, SearchIcon } from '../shared/icons';
+import { BoardLinkIcon, PlusIcon, SearchIcon } from '../shared/icons';
 import { ProjectDrawer } from './ProjectDrawer';
 import {
   computeProjectStats,
@@ -44,17 +47,18 @@ interface DrawerState {
   project: Project | null;
 }
 
-const STATUS_BADGE: Record<ProjectStatus, { scheme: string; variant: string }> = {
-  active: { scheme: 'blue', variant: 'subtle' },
-  planned: { scheme: 'gray', variant: 'outline' },
-  done: { scheme: 'gray', variant: 'subtle' },
+/** Neutral status tags (colour is reserved for workload and project identity). */
+const STATUS_TAG: Record<ProjectStatus, { dot: string; dotBorder: string; text: string }> = {
+  active: { dot: 'gray.700', dotBorder: 'gray.700', text: 'gray.800' },
+  planned: { dot: 'transparent', dotBorder: 'gray.500', text: 'gray.700' },
+  done: { dot: 'gray.300', dotBorder: 'gray.300', text: 'gray.500' },
 };
 
 function TimelineBar({ project, axis, today }: { project: Project; axis: TimelineWindow; today: ISODate }) {
   const bar = timelinePosition(axis, project.start, project.end);
   const marker = timelinePosition(axis, today, today);
   return (
-    <Box position="relative" h="8px" w="180px" bg="gray.100" borderRadius="full" aria-hidden data-testid="timeline-bar">
+    <Box position="relative" h="6px" w="180px" bg="gray.100" borderRadius="sm" aria-hidden data-testid="timeline-bar">
       <Box
         position="absolute"
         top={0}
@@ -62,11 +66,11 @@ function TimelineBar({ project, axis, today }: { project: Project; axis: Timelin
         left={`${bar.left}%`}
         w={`${bar.width}%`}
         minW="3px"
-        bg={`${project.color}.300`}
-        borderRadius="full"
-        opacity={project.status === 'done' ? 0.5 : 1}
+        bg={projectColorTokens(project.color).edge}
+        borderRadius="sm"
+        opacity={project.status === 'done' ? 0.35 : 1}
       />
-      <Box position="absolute" top="-3px" bottom="-3px" left={`${marker.left}%`} w="2px" bg="blue.500" borderRadius="full" />
+      <Box position="absolute" top="-4px" bottom="-4px" left={`${marker.left}%`} w="1px" bg="board.today" />
     </Box>
   );
 }
@@ -84,7 +88,7 @@ export function ProjectsView({ today: todayProp }: ProjectsViewProps) {
 
   const open = (project: Project | null) => setDrawer({ open: true, project });
   const addButton = (
-    <Button leftIcon={<PlusIcon boxSize={3.5} />} size="sm" onClick={() => open(null)} aria-label="Projekt anlegen">
+    <Button leftIcon={<PlusIcon boxSize="14px" />} onClick={() => open(null)} aria-label="Projekt anlegen">
       Projekt
     </Button>
   );
@@ -96,17 +100,17 @@ export function ProjectsView({ today: todayProp }: ProjectsViewProps) {
     content = <ListSkeleton label="Projekte werden geladen" />;
   } else if (projects.length === 0) {
     content = (
-      <Box bg="white" borderWidth="1px" borderColor="gray.200" borderRadius="lg">
+      <Frame>
         <EmptyState title="Noch keine Projekte" text="Lege das erste Projekt an, um Personen darauf einzuplanen." action={addButton} />
-      </Box>
+      </Frame>
     );
   } else {
     content = (
       <>
-        <Flex gap={3} align="center" wrap="wrap" mb={4}>
-          <InputGroup size="sm" w={{ base: 'full', md: '240px' }}>
-            <InputLeftElement pointerEvents="none" color="gray.400">
-              <SearchIcon boxSize={3.5} />
+        <Flex gap={2} align="center" wrap="wrap" mb={3}>
+          <InputGroup w={{ base: 'full', md: '240px' }}>
+            <InputLeftElement pointerEvents="none" color="gray.500" h="32px">
+              <SearchIcon boxSize="14px" />
             </InputLeftElement>
             <Input
               type="search"
@@ -118,10 +122,8 @@ export function ProjectsView({ today: todayProp }: ProjectsViewProps) {
             />
           </InputGroup>
           <Select
-            size="sm"
             w="auto"
             minW="160px"
-            bg="white"
             aria-label="Status filtern"
             value={filters.status}
             onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value as ProjectFilters['status'] }))}
@@ -134,61 +136,83 @@ export function ProjectsView({ today: todayProp }: ProjectsViewProps) {
             ))}
           </Select>
           <HStack spacing={3} ml="auto">
-            <Text fontSize="sm" color="gray.500" data-testid="projects-count" aria-live="polite">
+            <Text fontSize="xs" color="gray.500" data-testid="projects-count" aria-live="polite">
               {visible.length} von {projects.length} Projekten
             </Text>
             {filtered && (
-              <Button size="sm" variant="ghost" colorScheme="gray" onClick={() => setFilters(DEFAULT_PROJECT_FILTERS)}>
+              <Button variant="ghost" color="accent.600" onClick={() => setFilters(DEFAULT_PROJECT_FILTERS)}>
                 Filter zurücksetzen
               </Button>
             )}
           </HStack>
         </Flex>
 
-        <Box bg="white" borderWidth="1px" borderColor="gray.200" borderRadius="lg" overflowX="auto">
+        <Frame overflowX="auto">
           {visible.length === 0 ? (
             <EmptyState
               title="Keine Projekte gefunden"
               text="Passe Suche oder Statusfilter an."
               action={
-                <Button size="sm" variant="outline" colorScheme="gray" onClick={() => setFilters(DEFAULT_PROJECT_FILTERS)}>
+                <Button variant="outline" onClick={() => setFilters(DEFAULT_PROJECT_FILTERS)}>
                   Filter zurücksetzen
                 </Button>
               }
             />
           ) : (
-            <Table size="sm" aria-label="Projekte">
-              <Thead>
+            <Table size="md" aria-label="Projekte">
+              <Thead position="sticky" top={0} zIndex={1}>
                 <Tr>
-                  <Th py={3} color="gray.500">Projekt</Th>
-                  <Th py={3} color="gray.500">Status</Th>
-                  <Th py={3} color="gray.500">Laufzeit</Th>
-                  <Th py={3} color="gray.500">
+                  <Th>Projekt</Th>
+                  <Th>Status</Th>
+                  <Th>Laufzeit</Th>
+                  <Th>
                     Zeitachse
                     <Text as="span" srOnly>
                       {' '}
                       ({formatDate(axis.from)} – {formatDate(axis.to)}, Linie = heute)
                     </Text>
                   </Th>
-                  <Th py={3} color="gray.500" isNumeric>Personen</Th>
-                  <Th py={3} color="gray.500" isNumeric title="Eingeplante Vollzeitäquivalente in der aktuellen Woche">
+                  <Th isNumeric>Personen</Th>
+                  <Th isNumeric title="Eingeplante Vollzeitäquivalente in der aktuellen Woche">
                     FTE diese Woche
+                  </Th>
+                  <Th w="56px">
+                    <Text as="span" srOnly>
+                      Aktionen
+                    </Text>
                   </Th>
                 </Tr>
               </Thead>
               <Tbody>
                 {visible.map((p) => {
                   const s = stats[p.id];
+                  const tag = STATUS_TAG[p.status];
                   return (
-                    <Tr key={p.id} data-project-id={p.id} cursor="pointer" _hover={{ bg: 'gray.50' }} onClick={() => open(p)}>
-                      <Td py={3} borderColor="gray.100">
+                    <Tr
+                      key={p.id}
+                      data-project-id={p.id}
+                      cursor="pointer"
+                      transition="background 100ms"
+                      _hover={{ bg: 'rgba(21,24,32,0.03)' }}
+                      bg={drawer.open && drawer.project?.id === p.id ? 'accent.50' : undefined}
+                      onClick={() => open(p)}
+                    >
+                      <Td>
                         <HStack spacing={2.5}>
-                          <Box w="10px" h="10px" borderRadius="full" bg={`${p.color}.400`} flexShrink={0} aria-hidden data-testid="color-dot" data-color={p.color} />
+                          <Box
+                            w="10px"
+                            h="10px"
+                            borderRadius="full"
+                            bg={projectColorTokens(p.color).edge}
+                            flexShrink={0}
+                            aria-hidden
+                            data-testid="color-dot"
+                            data-color={p.color}
+                          />
                           <Button
                             variant="link"
-                            colorScheme="gray"
-                            color="gray.800"
-                            fontWeight="semibold"
+                            color={p.status === 'done' ? 'gray.500' : 'gray.900'}
+                            fontWeight={600}
                             fontSize="sm"
                             aria-label={`${p.name} bearbeiten`}
                             onClick={(ev) => {
@@ -200,28 +224,44 @@ export function ProjectsView({ today: todayProp }: ProjectsViewProps) {
                           </Button>
                         </HStack>
                       </Td>
-                      <Td py={3} borderColor="gray.100">
-                        <Badge colorScheme={STATUS_BADGE[p.status].scheme} variant={STATUS_BADGE[p.status].variant} fontSize="10px">
-                          {PROJECT_STATUS_LABELS[p.status]}
-                        </Badge>
+                      <Td>
+                        <HStack spacing={1.5}>
+                          <Box boxSize="6px" borderRadius="full" bg={tag.dot} borderWidth="1px" borderColor={tag.dotBorder} />
+                          <Text fontSize="sm" color={tag.text}>
+                            {PROJECT_STATUS_LABELS[p.status]}
+                          </Text>
+                        </HStack>
                       </Td>
-                      <Td py={3} borderColor="gray.100" whiteSpace="nowrap">
-                        <Text fontSize="sm" color="gray.700">
+                      <Td whiteSpace="nowrap">
+                        <Text fontSize="xs" fontFamily="mono" color="gray.700">
                           {formatDate(p.start)} – {formatDate(p.end)}
                         </Text>
                       </Td>
-                      <Td py={3} borderColor="gray.100">
+                      <Td>
                         <TimelineBar project={p} axis={axis} today={today} />
                       </Td>
-                      <Td py={3} borderColor="gray.100" isNumeric>
-                        <Text as="span" fontSize="sm" color="gray.700">
+                      <Td isNumeric>
+                        <Text as="span" fontFamily="mono" fontSize="sm" color="gray.700">
                           {s.people}
                         </Text>
                       </Td>
-                      <Td py={3} borderColor="gray.100" isNumeric>
-                        <Text as="span" fontSize="sm" color={s.currentFte > 0 ? 'gray.700' : 'gray.400'} data-testid="current-fte">
+                      <Td isNumeric>
+                        <Text as="span" fontFamily="mono" fontSize="sm" color={s.currentFte > 0 ? 'gray.700' : 'gray.400'} data-testid="current-fte">
                           {formatFte(s.currentFte)}
                         </Text>
+                      </Td>
+                      <Td py={0} pr={2}>
+                        <Tooltip label="Im Board zeigen" openDelay={400}>
+                          <IconButton
+                            as={RouterLink}
+                            to={`/?project=${encodeURIComponent(p.id)}`}
+                            aria-label={`${p.name} im Board zeigen`}
+                            icon={<BoardLinkIcon boxSize="16px" />}
+                            variant="ghost"
+                            color="gray.500"
+                            onClick={(ev) => ev.stopPropagation()}
+                          />
+                        </Tooltip>
                       </Td>
                     </Tr>
                   );
@@ -229,7 +269,7 @@ export function ProjectsView({ today: todayProp }: ProjectsViewProps) {
               </Tbody>
             </Table>
           )}
-        </Box>
+        </Frame>
       </>
     );
   }

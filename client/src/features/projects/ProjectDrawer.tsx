@@ -29,6 +29,7 @@ import { DeleteConfirm, IssueList } from '../shared/components';
 import { PROJECT_STATUS_LABELS, pluralize } from '../shared/format';
 import { useDryRun } from '../shared/useDryRun';
 import { useUndoToast } from '../shared/useUndoToast';
+import { projectColorTokens } from '../../domain/projectColors';
 import { ColorSwatchPicker } from './ColorSwatchPicker';
 
 export interface ProjectDrawerProps {
@@ -156,15 +157,15 @@ export function ProjectDrawer({ isOpen, onClose, project, today }: ProjectDrawer
 
   return (
     <Drawer isOpen={isOpen} onClose={onClose} placement="right" size="sm" initialFocusRef={nameRef}>
-      <DrawerOverlay bg="blackAlpha.300" />
-      <DrawerContent>
+      <DrawerOverlay />
+      <DrawerContent borderTopWidth="4px" borderTopColor={projectColorTokens(form.color).edge}>
         <Flex as="form" direction="column" h="full" onSubmit={handleSubmit} noValidate>
         <DrawerCloseButton aria-label="Schließen" />
-        <DrawerHeader borderBottomWidth="1px" borderColor="gray.100" fontSize="lg">
+        <DrawerHeader>
           {title}
         </DrawerHeader>
 
-        <DrawerBody py={5}>
+        <DrawerBody>
           <Stack spacing={5}>
             {project && (
               <Text fontSize="sm" color="gray.500" mt={-2}>
@@ -217,7 +218,7 @@ export function ProjectDrawer({ isOpen, onClose, project, today }: ProjectDrawer
           </Stack>
         </DrawerBody>
 
-        <DrawerFooter borderTopWidth="1px" borderColor="gray.100" flexDirection="column" gap={3}>
+        <DrawerFooter flexDirection="column" gap={3}>
           {confirmDelete && project ? (
             <DeleteConfirm
               title={`${project.name} löschen?`}
@@ -233,12 +234,12 @@ export function ProjectDrawer({ isOpen, onClose, project, today }: ProjectDrawer
           ) : (
             <HStack w="full">
               {project && (
-                <Button variant="ghost" colorScheme="red" onClick={() => setConfirmDelete(true)}>
+                <Button variant="danger" onClick={() => setConfirmDelete(true)}>
                   Löschen
                 </Button>
               )}
               <HStack ml="auto">
-                <Button variant="ghost" colorScheme="gray" onClick={onClose}>
+                <Button variant="outline" onClick={onClose}>
                   Abbrechen
                 </Button>
                 <Button type="submit" isLoading={saving}>

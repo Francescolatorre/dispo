@@ -1,8 +1,7 @@
-import { Box, Button, CloseButton, Flex, Text } from '@chakra-ui/react';
+import { Box, Button, CloseButton, Flex, HStack, Text } from '@chakra-ui/react';
+import { AlertIcon } from '../icons';
 
 export type Tone = 'success' | 'warning' | 'error' | 'info';
-
-const TONE_COLOR: Record<Tone, string> = { success: 'green.500', warning: 'red.500', error: 'red.500', info: 'blue.500' };
 
 export interface ActionToastProps {
   title: string;
@@ -12,42 +11,59 @@ export interface ActionToastProps {
   onClose: () => void;
 }
 
-/** Toast body with an optional "Rückgängig" action. */
+/**
+ * Ink toast (bottom centre) with an optional "Rückgängig" action. Consequences such as
+ * overbooking are listed with the ⚠ glyph in the light "over" tint — no red fills.
+ */
 export function ActionToast({ title, messages, tone, onUndo, onClose }: ActionToastProps) {
+  const alarming = tone === 'warning' || tone === 'error';
   return (
     <Box
       data-testid="action-toast"
       data-tone={tone}
-      bg="white"
-      color="gray.800"
-      borderRadius="md"
-      borderLeftWidth="4px"
-      borderLeftColor={TONE_COLOR[tone]}
+      bg="gray.900"
+      color="white"
+      borderRadius="lg"
       boxShadow="lg"
-      px={4}
-      py={3}
-      minW="300px"
-      maxW="420px"
+      pl={4}
+      pr={2}
+      py={2.5}
+      minW="320px"
+      maxW="480px"
     >
-      <Flex align="flex-start" gap={3}>
+      <Flex align="center" gap={3}>
         <Box flex={1} minW={0}>
-          <Text fontWeight="semibold" fontSize="sm">
-            {title}
-          </Text>
-          {messages.map((m) => (
-            <Text key={m} fontSize="sm" color={tone === 'warning' || tone === 'error' ? 'red.700' : 'gray.600'} mt={0.5}>
-              {m}
+          <HStack spacing={2}>
+            {tone === 'error' && <AlertIcon boxSize="14px" color="load.over.bg" />}
+            <Text fontWeight={500} fontSize="sm">
+              {title}
             </Text>
+          </HStack>
+          {messages.map((m) => (
+            <HStack key={m} spacing={1.5} mt={0.5} align="flex-start">
+              {alarming && <AlertIcon boxSize="12px" color="load.over.bg" mt="3px" flexShrink={0} />}
+              <Text fontSize="xs" color={alarming ? 'load.over.bg' : 'gray.300'}>
+                {m}
+              </Text>
+            </HStack>
           ))}
         </Box>
         {onUndo && (
-          <Button size="sm" variant="outline" colorScheme="blue" onClick={onUndo}>
+          <Button
+            variant="ghost"
+            size="sm"
+            color="accent.100"
+            fontWeight={600}
+            _hover={{ bg: 'whiteAlpha.200' }}
+            _active={{ bg: 'whiteAlpha.300' }}
+            onClick={onUndo}
+            title="Strg+Z"
+          >
             Rückgängig
           </Button>
         )}
-        <CloseButton size="sm" aria-label="Hinweis schließen" onClick={onClose} />
+        <CloseButton size="sm" color="gray.400" _hover={{ bg: 'whiteAlpha.200', color: 'white' }} aria-label="Hinweis schließen" onClick={onClose} />
       </Flex>
     </Box>
   );
 }
-

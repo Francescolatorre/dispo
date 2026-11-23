@@ -38,6 +38,7 @@ describe('ProjectsView', () => {
     expect(cells[4]).toHaveTextContent('5');
     expect(within(web).getByTestId('current-fte')).toHaveTextContent('2,3');
     expect(within(web).getByTestId('timeline-bar')).toBeInTheDocument();
+    expect(within(web).getByRole('link', { name: 'Website-Relaunch im Board zeigen' })).toHaveAttribute('href', '/?project=prj-01');
 
     const crm = rowOf('CRM-Migration');
     expect(crm).toHaveTextContent('Geplant');

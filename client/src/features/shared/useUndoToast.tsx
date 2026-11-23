@@ -39,17 +39,20 @@ export function useUndoToast() {
         render: ({ onClose }) => (
           <HStack
             data-testid="undo-toast"
-            bg="gray.800"
+            bg="gray.900"
             color="white"
-            borderRadius="md"
+            borderRadius="lg"
             boxShadow="lg"
-            px={4}
-            py={3}
-            spacing={4}
+            pl={4}
+            pr={2}
+            py={2.5}
+            spacing={3}
             align="center"
+            minW="320px"
+            maxW="480px"
           >
             <Box flex={1} minW={0}>
-              <Text fontWeight="semibold" fontSize="sm">
+              <Text fontWeight={500} fontSize="sm">
                 {title}
               </Text>
               {description && (
@@ -59,10 +62,12 @@ export function useUndoToast() {
               )}
             </Box>
             <Button
+              variant="ghost"
               size="sm"
-              variant="outline"
-              colorScheme="whiteAlpha"
-              color="white"
+              color="accent.100"
+              fontWeight={600}
+              _hover={{ bg: 'whiteAlpha.200' }}
+              _active={{ bg: 'whiteAlpha.300' }}
               onClick={() => {
                 onClose();
                 void undo();
@@ -70,7 +75,7 @@ export function useUndoToast() {
             >
               Rückgängig
             </Button>
-            <CloseButton size="sm" aria-label="Hinweis schließen" onClick={onClose} />
+            <CloseButton size="sm" color="gray.400" _hover={{ bg: 'whiteAlpha.200', color: 'white' }} aria-label="Hinweis schließen" onClick={onClose} />
           </HStack>
         ),
       });

@@ -157,15 +157,15 @@ export function PersonDrawer({ isOpen, onClose, employee, roles }: PersonDrawerP
 
   return (
     <Drawer isOpen={isOpen} onClose={onClose} placement="right" size="sm" initialFocusRef={nameRef}>
-      <DrawerOverlay bg="blackAlpha.300" />
+      <DrawerOverlay />
       <DrawerContent>
         <Flex as="form" direction="column" h="full" onSubmit={handleSubmit} noValidate>
         <DrawerCloseButton aria-label="Schließen" />
-        <DrawerHeader borderBottomWidth="1px" borderColor="gray.100" fontSize="lg">
+        <DrawerHeader>
           {title}
         </DrawerHeader>
 
-        <DrawerBody py={5}>
+        <DrawerBody>
           <Stack spacing={5}>
             {employee && (
               <Text fontSize="sm" color="gray.500" mt={-2}>
@@ -248,7 +248,7 @@ export function PersonDrawer({ isOpen, onClose, employee, roles }: PersonDrawerP
           </Stack>
         </DrawerBody>
 
-        <DrawerFooter borderTopWidth="1px" borderColor="gray.100" flexDirection="column" gap={3}>
+        <DrawerFooter flexDirection="column" gap={3}>
           {confirmDelete && employee ? (
             <DeleteConfirm
               title={`${employee.name} löschen?`}
@@ -264,12 +264,12 @@ export function PersonDrawer({ isOpen, onClose, employee, roles }: PersonDrawerP
           ) : (
             <HStack w="full">
               {employee && (
-                <Button variant="ghost" colorScheme="red" onClick={() => setConfirmDelete(true)}>
+                <Button variant="danger" onClick={() => setConfirmDelete(true)}>
                   Löschen
                 </Button>
               )}
               <HStack ml="auto">
-                <Button variant="ghost" colorScheme="gray" onClick={onClose}>
+                <Button variant="outline" onClick={onClose}>
                   Abbrechen
                 </Button>
                 <Button type="submit" isLoading={saving}>
