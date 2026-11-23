@@ -26,7 +26,7 @@ Alle Tools nehmen ein JSON-Objekt (`additionalProperties: false`) und liefern JS
 | `get_guide` | readOnly | `topic?` (`all` Standard, `overview`, `concepts`, `workflow`, `sops`, `pitfalls`, `tools`) | Leitfaden für Agenten: Zweck und gelöste Probleme, Begriffe/Einheiten/Ampel (Schwellen live aus der Workload-Engine), Vorgehen und Rezepte, verbindliche SOPs (z. B. keine Überbuchung ohne Auftrag, Projektlaufzeit respektieren, erst dryRun), typische Fehler; dazu `context.today`/`currentWeek`. Inhalt: `client/src/features/webmcp/guide.ts` |
 | `list_employees` | readOnly | `role?`, `activeOnly?` (Standard true), `query?` | `employees[]` mit `id, name, role, seniority, capacity, active` |
 | `list_projects` | readOnly | `status?` (`planned`/`active`/`done`), `query?` | `projects[]` mit `id, name, status, start, end, assignmentCount` |
-| `get_workload` | readOnly | `from?`, `to?` (Standard: diese Woche + 8 Wochen, max. 26), `employeeIds?` | je Person und Woche `load, utilization, freePercent, status, assignmentIds`, dazu die Einsätze der Person im Zeitraum (mit `id`) |
+| `get_workload` | readOnly | `from?`, `to?` (Standard: diese Woche + 8 Wochen, max. 26), `employeeIds?` | `employees[].weeks[]`: `load, utilization, freePercent, status, assignmentIds` (nur IDs); `employees[].assignments[]`: die Einsätze der Person im Zeitraum (mit `id`) |
 | `find_free_capacity` | readOnly | `from?`, `to?`, `minFreePercent` (Standard 20), `role?` | `candidates[]` sortiert nach freier Kapazität, mit Wochenwerten |
 | `create_assignment` | – | `employeeId` \| `employeeName`, `projectId` \| `projectName`, `start`, `end`, `allocation` (10–100, 10er-Schritte), `role?`, `dryRun?` | Schreib-Ergebnis (s. u.) |
 | `create_project` | – | `name`, `start`, `end`, `status?` (Standard: `active` wenn Start ≤ heute, sonst `planned`), `color?` (Palette; Standard: ungenutzte Farbe), `dryRun?` | `{ ok, dryRun, summary, project, warnings, nextStep, undoLabel }`; gleicher Name → Fehler mit `existing`, ähnliche Namen → Warnung. Laut SOP-10 nur auf ausdrücklichen Wunsch; Personen und Projekt-Änderungen bleiben in der Oberfläche |
@@ -55,6 +55,7 @@ Alle Tools nehmen ein JSON-Objekt (`additionalProperties: false`) und liefern JS
    await document.modelContext.executeTool(t, { minFreePercent: 50 });
    ```
    Hinweis: Agenten, die eine Seite nur als DOM/Screenshot lesen (z. B. die Claude-in-Chrome-Erweiterung), sehen die WebMCP-Tools **nicht** von selbst – sie brauchen einen WebMCP-fähigen Konsumenten (eingebauter Chrome-Agent, Inspector-Erweiterung) oder rufen die Tools wie oben per JavaScript auf.
+   **Schreibpfad verifiziert (2026-11-23, Browser-Agent über WebMCP):** `create_assignment` (Felix, KI-Assistent, 2026-W52–W53, 20 %) erst mit `dryRun` (impact 50 → 70 %, luft → ok, keine Warnungen), dann echt angelegt (Toast „Einsatz angelegt – durch KI-Assistent“, Balken im Board), danach `undo_last_change` mit `expectedLabel: "Einsatz anlegen"` (Toast „Rückgängig: …“, Balken weg, `get_workload` wieder 50 %, Redo aktiv).
 5. Alternativ die Erweiterung **Model Context Tool Inspector** (Chrome Web Store): Tools auflisten, aufrufen oder per natürlicher Sprache mit eigenem Gemini-/OpenAI-/Anthropic-API-Key steuern lassen.
 
 ### Claude Code / Claude Desktop über das MCP-B Local Relay (ungetestet)

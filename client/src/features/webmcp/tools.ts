@@ -526,8 +526,8 @@ export function createPlanningTools(getContext: PlanningToolContextGetter, hooks
       name: 'get_workload',
       title: 'Auslastung abfragen',
       description:
-        'Liefert die Auslastung je Person und ISO-Woche im Zeitraum: load, utilization, freePercent, status sowie die IDs der beteiligten Einsätze, ' +
-        'plus die Einsätze jeder Person im Zeitraum (mit id für update_assignment/delete_assignment). ' +
+        'Liefert die Auslastung je Person und ISO-Woche im Zeitraum: employees[].weeks[] mit load, utilization, freePercent, status und assignmentIds (nur IDs). ' +
+        'Die vollständigen Einsätze jeder Person im Zeitraum stehen in employees[].assignments[] (mit id für update_assignment/delete_assignment). ' +
         `${UNITS_HINT} ${STATUS_HINT}`,
       readOnly: true,
       handler: (ctx, input) => {
