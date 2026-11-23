@@ -32,10 +32,11 @@ type Row = Record<string, unknown>;
 const rows = (r: ToolResult, key: string) => r[key] as Row[];
 
 describe('createPlanningTools — definitions', () => {
-  it('defines the eight tools with object schemas and hints', () => {
+  it('defines the nine tools with object schemas and hints', () => {
     const { tools } = setup();
     expect(Object.keys(tools)).toEqual(PLANNING_TOOL_NAMES);
     expect(PLANNING_TOOL_NAMES).toEqual([
+      'get_guide',
       'list_employees',
       'list_projects',
       'get_workload',
@@ -52,7 +53,7 @@ describe('createPlanningTools — definitions', () => {
       // Must survive structured cloning / JSON transport.
       expect(JSON.parse(JSON.stringify(t.inputSchema))).toEqual(t.inputSchema);
     }
-    for (const name of ['list_employees', 'list_projects', 'get_workload', 'find_free_capacity']) {
+    for (const name of ['get_guide', 'list_employees', 'list_projects', 'get_workload', 'find_free_capacity']) {
       expect(tools[name].annotations?.readOnlyHint).toBe(true);
     }
     expect(tools.create_assignment.annotations?.readOnlyHint).toBe(false);
@@ -73,6 +74,29 @@ describe('createPlanningTools — definitions', () => {
     const r = await call('list_employees', JSON.stringify({ role: 'QA' }));
     expect(r.ok).toBe(true);
     expect(r.count).toBe(2);
+  });
+});
+
+describe('get_guide', () => {
+  it('returns all sections with live context and thresholds from the engine', async () => {
+    const { call } = setup();
+    const r = await call('get_guide');
+    expect(r.ok).toBe(true);
+    const guide = r.guide as Record<string, Record<string, unknown>>;
+    expect(Object.keys(guide)).toEqual(['context', 'overview', 'concepts', 'workflow', 'sops', 'pitfalls', 'tools']);
+    expect(guide.context).toEqual({ today: TODAY, currentWeek: '2026-W48' });
+    expect(JSON.stringify(guide.concepts)).toContain('bis 50 % utilization');
+    expect(Object.keys(guide.sops).length).toBeGreaterThanOrEqual(8);
+    expect(JSON.parse(JSON.stringify(r))).toEqual(r);
+  });
+
+  it('returns a single topic and rejects unknown topics', async () => {
+    const { call } = setup();
+    const r = await call('get_guide', { topic: 'sops' });
+    expect(Object.keys(r.guide as object)).toEqual(['context', 'sops']);
+    const bad = await call('get_guide', { topic: 'secrets' });
+    expect(bad.ok).toBe(false);
+    expect(bad.error).toMatch(/Unbekanntes topic/);
   });
 });
 

@@ -113,7 +113,7 @@ test.describe('WebMCP', () => {
     });
   });
 
-  test('registers the 8 planning tools and find_free_capacity returns candidates', async ({ page }) => {
+  test('registers the 9 planning tools and find_free_capacity returns candidates', async ({ page }) => {
     await openBoard(page);
     await expect(page.getByTestId('webmcp-status')).toBeVisible();
 
@@ -122,6 +122,7 @@ test.describe('WebMCP', () => {
       'create_assignment',
       'delete_assignment',
       'find_free_capacity',
+      'get_guide',
       'get_workload',
       'list_employees',
       'list_projects',

@@ -19,6 +19,7 @@ import {
 } from '../../domain/types';
 import type { ValidationIssue } from '../../domain/validation';
 import { computeWorkloadMatrix, findFreeCapacity } from '../../domain/workload';
+import { GUIDE_TOPICS, buildGuide, type GuideTopic } from './guide';
 import type { JsonSchema, ModelContextTool, ToolResult } from './modelContext';
 
 export interface PlanningToolContext extends PlanningData {
@@ -312,6 +313,19 @@ const UNITS_HINT =
   '"load" und "freePercent" sind Prozent einer Vollzeitwoche (FTE-%), "utilization" ist Prozent der eigenen Kapazität der Person (Teilzeit berücksichtigt).';
 
 const SCHEMAS = {
+  get_guide: {
+    type: 'object',
+    properties: {
+      topic: {
+        type: 'string',
+        enum: [...GUIDE_TOPICS],
+        description:
+          'Abschnitt des Leitfadens: "all" (Standard), "overview" (Zweck, gelöste Probleme), "concepts" (Begriffe, Einheiten, Ampel), "workflow" (Vorgehen, Rezepte), "sops" (verbindliche Regeln), "pitfalls" (typische Fehler), "tools" (Werkzeugübersicht).',
+        default: 'all',
+      },
+    },
+    additionalProperties: false,
+  },
   list_employees: {
     type: 'object',
     properties: {
@@ -427,6 +441,22 @@ export function createPlanningTools(getContext: PlanningToolContextGetter, hooks
   };
 
   const specs: ToolSpec[] = [
+    {
+      name: 'get_guide',
+      title: 'Leitfaden für Agenten',
+      description:
+        'ZUERST AUFRUFEN. Erklärt, welche Probleme Dispo löst, die Begriffe und Einheiten (FTE-% vs. Auslastung, Ampel), das empfohlene Vorgehen ' +
+        '(lesen → dryRun → schreiben → berichten), verbindliche SOPs (z. B. keine Überbuchung ohne Auftrag, Projektlaufzeit respektieren) und typische Fehler. ' +
+        'Optional topic für einen einzelnen Abschnitt.',
+      readOnly: true,
+      handler: (ctx, input) => {
+        const topic = optString(input, 'topic') ?? 'all';
+        if (!(GUIDE_TOPICS as readonly string[]).includes(topic)) {
+          return failure(`Unbekanntes topic "${topic}". Erlaubt: ${GUIDE_TOPICS.join(', ')}.`);
+        }
+        return { ok: true, topic, guide: buildGuide(topic as GuideTopic, ctx.today) };
+      },
+    },
     {
       name: 'list_employees',
       title: 'Personen auflisten',

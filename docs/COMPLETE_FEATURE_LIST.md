@@ -105,7 +105,7 @@ Legende: ✅ fertig · ⚠️ eingeschränkt · ⏳ geplant / nicht umgesetzt
 
 | Status | Funktion | Beschreibung |
 |---|---|---|
-| ✅ | Registrierung | 8 Werkzeuge über `document.modelContext` (Fallback `navigator.modelContext`), Abmelden per AbortSignal; ohne WebMCP passiert nichts |
+| ✅ | Registrierung | 9 Werkzeuge über `document.modelContext` (Fallback `navigator.modelContext`), Abmelden per AbortSignal; ohne WebMCP passiert nichts |
 | ✅ | Lesewerkzeuge | `list_employees`, `list_projects`, `get_workload`, `find_free_capacity` |
 | ✅ | Schreibwerkzeuge | `create_assignment`, `update_assignment`, `delete_assignment` (mit `dryRun`, Namensauflösung, Folgen), `undo_last_change` |
 | ✅ | Sichtbarkeit | Änderungen des Assistenten erscheinen als Toast „… – durch KI-Assistent“ mit Rückgängig |

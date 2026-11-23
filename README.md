@@ -31,7 +31,7 @@ die App ihre Planungsfunktionen als WebMCP-Werkzeuge für KI-Assistenten im Brow
   Löschen mit Rückgängig.
 - **Datenhaltung:** Browser (localStorage, mit Demodaten) oder REST-API (Express + Postgres),
   automatische Auswahl beim Start.
-- **WebMCP:** 8 Werkzeuge (lesen, freie Kapazität finden, Einsätze anlegen/ändern/löschen,
+- **WebMCP:** 9 Werkzeuge (Leitfaden mit SOPs für Agenten, lesen, freie Kapazität finden, Einsätze anlegen/ändern/löschen,
   rückgängig) für KI-Assistenten im Browser.
 
 Die vollständige Liste mit Status steht in [docs/COMPLETE_FEATURE_LIST.md](docs/COMPLETE_FEATURE_LIST.md).

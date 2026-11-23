@@ -13,7 +13,7 @@ Stand der API: W3C WebML CG Draft (Nov 2026), imperative API `document.modelCont
 | `client/src/features/webmcp/WebMCPBridge.tsx` | Unsichtbare Komponente in `<PlanningProvider>`: registriert alle Tools, sobald Daten geladen sind, meldet sie beim Unmount ab, zeigt Toasts bei Agent-Änderungen |
 | `client/src/features/webmcp/status.ts`, `WebMCPStatusLine.tsx` | Anzahl registrierter Tools als Kontext (gesetzt in `App.tsx` über `onRegistered`) und die Statuszeile „KI-Werkzeuge aktiv (WebMCP)“ in der Seitenleiste |
 
-Ohne WebMCP im Browser passiert nichts (kein Polyfill, keine zusätzliche Abhängigkeit). Nach erfolgreicher Registrierung zeigt die Seitenleiste „KI-Werkzeuge aktiv (WebMCP)“; im Dev-Build steht zusätzlich in der Konsole: `[WebMCP] 8 Werkzeuge registriert: …`.
+Ohne WebMCP im Browser passiert nichts (kein Polyfill, keine zusätzliche Abhängigkeit). Nach erfolgreicher Registrierung zeigt die Seitenleiste „KI-Werkzeuge aktiv (WebMCP)“; im Dev-Build steht zusätzlich in der Konsole: `[WebMCP] 9 Werkzeuge registriert: …`.
 
 Die E2E-Smoke-Tests (`client/tests/smoke.spec.ts`) prüfen Registrierung und `find_free_capacity` mit einem Stub für `document.modelContext`.
 
@@ -23,6 +23,7 @@ Alle Tools nehmen ein JSON-Objekt (`additionalProperties: false`) und liefern JS
 
 | Tool | Hinweise | Eingabe | Ausgabe |
 |---|---|---|---|
+| `get_guide` | readOnly | `topic?` (`all` Standard, `overview`, `concepts`, `workflow`, `sops`, `pitfalls`, `tools`) | Leitfaden für Agenten: Zweck und gelöste Probleme, Begriffe/Einheiten/Ampel (Schwellen live aus der Workload-Engine), Vorgehen und Rezepte, verbindliche SOPs (z. B. keine Überbuchung ohne Auftrag, Projektlaufzeit respektieren, erst dryRun), typische Fehler; dazu `context.today`/`currentWeek`. Inhalt: `client/src/features/webmcp/guide.ts` |
 | `list_employees` | readOnly | `role?`, `activeOnly?` (Standard true), `query?` | `employees[]` mit `id, name, role, seniority, capacity, active` |
 | `list_projects` | readOnly | `status?` (`planned`/`active`/`done`), `query?` | `projects[]` mit `id, name, status, start, end, assignmentCount` |
 | `get_workload` | readOnly | `from?`, `to?` (Standard: diese Woche + 8 Wochen, max. 26), `employeeIds?` | je Person und Woche `load, utilization, freePercent, status, assignmentIds`, dazu die Einsätze der Person im Zeitraum (mit `id`) |
@@ -44,10 +45,10 @@ Alle Tools nehmen ein JSON-Objekt (`additionalProperties: false`) und liefern JS
 
 1. Chrome ≥ 149 (aktuelle Stable 159). `chrome://flags/#enable-webmcp-testing` aktivieren und Chrome neu starten. Für lokale Entwicklung ist kein Origin-Trial-Token nötig.
 2. `cd client && npm.cmd run dev` und `http://localhost:5173` öffnen.
-3. DevTools-Konsole: `[WebMCP] 8 Werkzeuge registriert: …` erscheint. Prüfen mit `!!document.modelContext`.
+3. DevTools-Konsole: `[WebMCP] 9 Werkzeuge registriert: …` erscheint. Prüfen mit `!!document.modelContext`.
 4. **DevTools → Application → WebMCP**: listet die Tools mit Beschreibung; dort kann man ein Tool mit bearbeiteten Parametern manuell ausführen. Das Log „Invoked Tools“ zeigt Eingabe, Ausgabe und Fehler.
    Beispiel: `find_free_capacity` mit `{"from":"2026-W52","to":"2026-W53","minFreePercent":50}`, danach `create_assignment` mit `{"employeeName":"Felix","projectName":"KI-Assistent","start":"2026-W52","end":"2026-W53","allocation":50,"dryRun":true}`.
-   **Verifiziert (2026-11-23, Chrome 158 mit Flag):** `document.modelContext` vorhanden (Methoden `registerTool`, `getTools`, `executeTool`), alle 8 Tools registriert, `find_free_capacity` liefert Ergebnisse. Aufruf aus der Konsole: `executeTool` erwartet das **Tool-Objekt aus `getTools()`** und ein **Objekt** als Eingabe (kein JSON-String):
+   **Verifiziert (2026-11-23, Chrome 158 mit Flag):** `document.modelContext` vorhanden (Methoden `registerTool`, `getTools`, `executeTool`), alle damals 8 Tools registriert, `find_free_capacity` liefert Ergebnisse. Aufruf aus der Konsole: `executeTool` erwartet das **Tool-Objekt aus `getTools()`** und ein **Objekt** als Eingabe (kein JSON-String):
    ```js
    const t = (await document.modelContext.getTools()).find(x => x.name === 'find_free_capacity');
    await document.modelContext.executeTool(t, { minFreePercent: 50 });
