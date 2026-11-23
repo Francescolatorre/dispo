@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * E2E config (specs live in ./tests; none yet).
+ * E2E config (specs live in ./tests; `npm run test:e2e`).
  *
  * Default: only the Vite dev server, pinned to the in-browser data source
  * (`VITE_DATA_SOURCE=local`) — no database or API needed, every test starts from the seed.
