@@ -30,3 +30,27 @@ export const WarningIcon = createIcon({
     </g>
   ),
 });
+
+/** "Im Board zeigen" */
+export const BoardLinkIcon = createIcon({
+  displayName: 'BoardLinkIcon',
+  viewBox: '0 0 24 24',
+  path: (
+    <g {...stroke}>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M3 9h18M7 13h6M10 16.5h7" />
+    </g>
+  ),
+});
+
+export const PencilIcon = createIcon({
+  displayName: 'PencilIcon',
+  viewBox: '0 0 24 24',
+  path: <path {...stroke} d="M4 20h4L19 9a2.8 2.8 0 00-4-4L4 16v4zM13.5 6.5l4 4" />,
+});
+
+export const CheckIcon = createIcon({
+  displayName: 'CheckIcon',
+  viewBox: '0 0 24 24',
+  path: <path {...stroke} d="M5 12.5l4.5 4.5L19 7.5" />,
+});

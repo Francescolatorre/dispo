@@ -20,22 +20,52 @@ import type { Assignment, ISODate } from '../../domain/types';
 
 export const DAYS_PER_WEEK = 7;
 
-/** Zoom levels (px per week column). */
-export const COLUMN_WIDTHS = [64, 96, 140] as const;
+/** Zoom levels S / M / L (px per week column; 8 px aligned). Default: M. */
+export const COLUMN_WIDTHS = [56, 88, 128] as const;
 export type ColumnWidth = (typeof COLUMN_WIDTHS)[number];
+export const DEFAULT_COLUMN_WIDTH: ColumnWidth = 88;
 
 /** Vertical metrics of a person row. */
-export const ROW_METRICS = {
-  /** Strip at the top of each row that shows the utilization % of the week. */
-  headerStrip: 22,
-  barHeight: 24,
+export interface RowMetrics {
+  /** Strip at the top of each row that shows the utilization of the week. */
+  headerStrip: number;
+  barHeight: number;
+  /** Gap between lanes; lane pitch = barHeight + laneGap (never below 24, WCAG 2.5.8). */
+  laneGap: number;
+  paddingBottom: number;
+  /** Rows never get smaller than this (keeps empty rows clickable as drop/create target). */
+  minHeight: number;
+  /** Lanes shown before the last visible lane turns into a "+N weitere" chip. */
+  maxLanes: number;
+}
+
+/** Density "Komfort": rows of 48 / 72 / 96 px for 1 / 2 / 3 lanes. */
+export const ROW_METRICS: RowMetrics = {
+  headerStrip: 20,
+  barHeight: 20,
   laneGap: 4,
   paddingBottom: 8,
-  /** Rows never get smaller than this (keeps empty rows clickable for milestone 4). */
-  minHeight: 56,
-} as const;
+  minHeight: 48,
+  maxLanes: 3,
+};
 
-export type RowMetrics = typeof ROW_METRICS;
+/** Density "Kompakt": rows of 40 / 64 px for 1 / 2 lanes. */
+export const ROW_METRICS_COMPACT: RowMetrics = {
+  headerStrip: 16,
+  barHeight: 20,
+  laneGap: 4,
+  paddingBottom: 4,
+  minHeight: 40,
+  maxLanes: 2,
+};
+
+export type Density = 'comfort' | 'compact';
+
+/** Width of the sticky name column per density (Komfort / Kompakt). */
+export const NAME_COLUMN_WIDTHS: Record<Density, number> = { comfort: 224, compact: 176 };
+export const NAME_COLUMN_WIDTH = NAME_COLUMN_WIDTHS.comfort;
+
+export const rowMetricsFor = (density: Density): RowMetrics => (density === 'compact' ? ROW_METRICS_COMPACT : ROW_METRICS);
 
 export interface BoardGeometry {
   /** Monday of the first visible week. */
@@ -211,25 +241,34 @@ export interface BarLayout extends BarSpan {
 }
 
 export interface RowLayout {
+  /** Bars that are drawn (lanes beyond the visible ones are left out). */
   bars: BarLayout[];
   laneCount: number;
   height: number;
+  /** Bars left out because the row is collapsed to `maxLanes` (0 when everything is shown). */
+  hiddenCount: number;
+  /** Lane that holds the "+N weitere" chip, or -1. */
+  overflowLane: number;
 }
 
 /**
  * Full layout of one person row: only assignments visible in the range are laid out
- * (lanes are packed among those), ordered by lane then x.
+ * (lanes are packed among those), ordered by lane then x. With more than `maxLanes` lanes
+ * the row shows `maxLanes − 1` lanes plus a "+N weitere" lane unless `expanded`.
  */
 export function layoutRow(
   geom: BoardGeometry,
   assignments: readonly Assignment[],
   metrics: RowMetrics = ROW_METRICS,
+  expanded = false,
 ): RowLayout {
   const visible = assignments
     .map((assignment) => ({ assignment, span: barSpan(geom, assignment.start, assignment.end) }))
     .filter((v): v is { assignment: Assignment; span: BarSpan } => v.span !== null);
   const { lanes, laneCount } = packLanes(geom, visible.map((v) => v.assignment));
-  const bars = visible
+  const collapsed = !expanded && laneCount > metrics.maxLanes;
+  const shownLanes = collapsed ? metrics.maxLanes - 1 : laneCount;
+  const all = visible
     .map(({ assignment, span }) => {
       const lane = lanes.get(assignment.id) ?? 0;
       return {
@@ -242,5 +281,12 @@ export function layoutRow(
       };
     })
     .sort((a, b) => a.lane - b.lane || a.x - b.x);
-  return { bars, laneCount, height: rowHeight(laneCount, metrics) };
+  const bars = all.filter((b) => b.lane < shownLanes);
+  return {
+    bars,
+    laneCount,
+    height: rowHeight(collapsed ? metrics.maxLanes : laneCount, metrics),
+    hiddenCount: all.length - bars.length,
+    overflowLane: collapsed ? metrics.maxLanes - 1 : -1,
+  };
 }

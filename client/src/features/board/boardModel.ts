@@ -4,7 +4,7 @@
  */
 import { addDays, addWeeks, listWeeks, rangesOverlap, startOfISOWeek, type WeekRef } from '../../domain/dates';
 import type { Assignment, Employee, ISODate, Seniority } from '../../domain/types';
-import { computeWorkloadMatrix, findFreeCapacity, type WorkloadStatus } from '../../domain/workload';
+import { computeWorkloadMatrix, findFreeCapacity, type WeekLoad, type WorkloadStatus } from '../../domain/workload';
 
 /** Default range: 2 weeks back to 14 weeks ahead of the current week (17 columns). */
 export const WEEKS_BACK = 2;
@@ -147,6 +147,29 @@ export const STATUS_LABELS: Record<WorkloadStatus, string> = {
   full: 'voll',
   over: 'überbucht',
 };
+
+/** Display value of a utilization in the strip: rounded, no "%" sign; `∞` for zero capacity. */
+export function stripValue(load: Pick<WeekLoad, 'utilization'>): string {
+  return Number.isFinite(load.utilization) ? String(Math.round(load.utilization)) : '∞';
+}
+
+/**
+ * Run-length labelling of a row's utilization strip ("timetable" style): a label is printed
+ * at the first visible week and wherever the displayed value changes. Overbooked weeks are
+ * the exception and are always labelled; so is `anchorIndex`. Returns one flag per week.
+ */
+export function stripLabels(
+  loads: ReadonlyArray<Pick<WeekLoad, 'utilization' | 'status'> | undefined>,
+  /** Extra week index that always gets a label (the current week: the board scrolls to it). */
+  anchorIndex = -1,
+): boolean[] {
+  return loads.map((load, i) => {
+    if (!load) return false;
+    if (i === 0 || i === anchorIndex || load.status === 'over') return true;
+    const prev = loads[i - 1];
+    return !prev || prev.status !== load.status || stripValue(prev) !== stripValue(load);
+  });
+}
 
 /** `2026-11-24` → `24.11.` */
 export function formatDayMonth(date: ISODate): string {

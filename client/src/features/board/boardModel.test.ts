@@ -9,6 +9,8 @@ import {
   formatPercent,
   hasActiveFilters,
   monthSegments,
+  stripLabels,
+  stripValue,
   VISIBLE_WEEKS,
   visibleWeeks,
 } from './boardModel';
@@ -103,5 +105,38 @@ describe('formatting', () => {
     expect(formatDate('2026-11-24')).toBe('24.11.2026');
     expect(formatPercent(87.5)).toBe('88 %');
     expect(formatPercent(Infinity)).toBe('∞ %');
+  });
+});
+
+describe('stripLabels', () => {
+  const l = (utilization: number, status: 'free' | 'luft' | 'ok' | 'full' | 'over') => ({ utilization, status });
+
+  it('labels the first week and every change of the displayed value', () => {
+    expect(stripLabels([l(80, 'ok'), l(80, 'ok'), l(80.2, 'ok'), l(60, 'ok'), l(60, 'ok'), l(0, 'free'), l(0, 'free')])).toEqual([
+      true,
+      false,
+      false,
+      true,
+      false,
+      true,
+      false,
+    ]);
+  });
+
+  it('always labels overbooked weeks', () => {
+    expect(stripLabels([l(120, 'over'), l(120, 'over'), l(90, 'ok')])).toEqual([true, true, true]);
+  });
+
+  it('also labels the anchor (current) week', () => {
+    expect(stripLabels([l(80, 'ok'), l(80, 'ok'), l(80, 'ok')], 2)).toEqual([true, false, true]);
+  });
+
+  it('skips missing weeks', () => {
+    expect(stripLabels([undefined, l(50, 'luft'), l(50, 'luft')])).toEqual([false, true, false]);
+  });
+
+  it('formats the strip value without a percent sign', () => {
+    expect(stripValue({ utilization: 87.5 })).toBe('88');
+    expect(stripValue({ utilization: Infinity })).toBe('∞');
   });
 });

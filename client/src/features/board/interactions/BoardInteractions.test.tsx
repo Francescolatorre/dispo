@@ -4,10 +4,10 @@ import { LocalRepository } from '../../../data/localRepository';
 import { renderWithProviders } from '../../../test/render';
 import { PlanningBoard } from '../PlanningBoard';
 
-// Wednesday of KW 48. Visible range starts Monday 2026-11-09 (KW 46), columns are 96 px.
+// Wednesday of KW 48. Visible range starts Monday 2026-11-09 (KW 46), columns are 88 px (zoom M).
 const TODAY = '2026-11-25';
-const COL = 96;
-// Seed "asg-08": Jonas Fischer (emp-04), Mobile App 2.0, 30 %, KW 48–49 → x 192 … 384.
+const COL = 88;
+// Seed "asg-08": Jonas Fischer (emp-04), Mobile App 2.0, 30 %, KW 48–49 → x 176 … 352.
 const JONAS_RELEASE = 'asg-08';
 
 // jsdom has no PointerEvent: a MouseEvent with the pointer fields is enough for React and the hook.
@@ -84,8 +84,9 @@ describe('board interactions', () => {
     expect(hint).toHaveAttribute('data-over', 'true');
     // Projected utilization in the heat cells: KW 48 drops from 120 % to 90 %, KW 50 rises to 70 %.
     await waitFor(() => expect(cell('emp-04', '2026-W48')).toHaveAttribute('data-projected', 'true'));
-    expect(cell('emp-04', '2026-W48')).toHaveTextContent('90 %');
-    expect(cell('emp-04', '2026-W50')).toHaveTextContent('70 %');
+    expect(cell('emp-04', '2026-W48')).toHaveAttribute('aria-label', expect.stringContaining('90 % ausgelastet'));
+    expect(cell('emp-04', '2026-W48')).toHaveTextContent('120→90'); // before → after in the strip
+    expect(cell('emp-04', '2026-W50')).toHaveAttribute('aria-label', expect.stringContaining('70 % ausgelastet'));
     expect(await get(JONAS_RELEASE)).toMatchObject({ start: '2026-11-23', end: '2026-12-04' }); // nothing written yet
 
     up(el, { x: 250 + COL + 10 });
@@ -130,12 +131,12 @@ describe('board interactions', () => {
     const { get } = setup();
     await screen.findByRole('grid');
     const endHandle = bar(JONAS_RELEASE).querySelector('[data-resize-handle="end"]')!;
-    drag(endHandle, { x: 384 }, { x: 384 + COL + 20 });
+    drag(endHandle, { x: 352 }, { x: 352 + COL + 20 });
     expect(await screen.findByText('Einsatz geändert')).toBeInTheDocument();
     expect(await get(JONAS_RELEASE)).toMatchObject({ start: '2026-11-23', end: '2026-12-11' });
 
     const startHandle = bar(JONAS_RELEASE).querySelector('[data-resize-handle="start"]')!;
-    drag(startHandle, { x: 192 }, { x: 192 - COL });
+    drag(startHandle, { x: 176 }, { x: 176 - COL });
     await waitFor(async () => expect(await get(JONAS_RELEASE)).toMatchObject({ start: '2026-11-16', end: '2026-12-11' }));
   }, 20_000);
 

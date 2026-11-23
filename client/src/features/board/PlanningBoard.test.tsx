@@ -60,7 +60,7 @@ describe('PlanningBoard', () => {
     expect(cell).toHaveAttribute('data-status', 'over');
     expect(cell).toHaveAttribute('data-week-key', '2026-W48');
     expect(cell).toHaveAttribute('data-employee-id', 'emp-04');
-    expect(cell).toHaveTextContent('120 %');
+    expect(cell).toHaveTextContent('120'); // strip: mono number + icon, no "%" sign
 
     // Exactly 100 % is "voll" (neutral), not overbooked and not a warning.
     expect(screen.getByRole('gridcell', { name: /^Lukas Müller, KW 48: 100 % ausgelastet, voll$/ })).toHaveAttribute(
@@ -77,7 +77,8 @@ describe('PlanningBoard', () => {
     const bar = screen.getByRole('button', { name: /^Jonas Fischer: Security-Audit, 50 %, 26\.10\.2026 bis 04\.12\.2026/ });
     expect(bar).toHaveAttribute('data-assignment-id', 'asg-06');
     expect(bar).toHaveAttribute('data-employee-id', 'emp-04');
-    expect(bar).toHaveTextContent('Security-Audit · 50 %');
+    expect(bar).toHaveTextContent('Security-Audit');
+    expect(bar).toHaveTextContent('50 %');
     await user.click(bar);
     expect(onAssignmentSelect).toHaveBeenCalledWith('asg-06');
   });
@@ -154,7 +155,7 @@ describe('PlanningBoard', () => {
     const { user } = setup();
     await screen.findByRole('grid');
     await user.type(screen.getByRole('searchbox', { name: 'Person suchen' }), 'xyz');
-    expect(screen.queryByRole('grid')).not.toBeInTheDocument();
+    expect(bodyRows()).toHaveLength(0); // the empty state sits inside the frame, below the header
     const empty = screen.getByTestId('board-empty');
     expect(empty).toHaveTextContent('Keine Personen passen zu den Filtern');
     await user.click(within(empty).getByRole('button', { name: 'Filter zurücksetzen' }));
@@ -186,10 +187,10 @@ describe('PlanningBoard', () => {
     const { user } = setup();
     await screen.findByRole('grid');
     const header = () => weekHeaders()[0];
-    expect(getComputedStyle(header()).width).toBe('96px');
-    await user.click(screen.getByRole('button', { name: 'Weit' }));
-    expect(getComputedStyle(header()).width).toBe('140px');
-    expect(screen.getByRole('button', { name: 'Weit' })).toHaveAttribute('aria-pressed', 'true');
+    expect(getComputedStyle(header()).width).toBe('88px');
+    await user.click(screen.getByRole('button', { name: 'L' }));
+    expect(getComputedStyle(header()).width).toBe('128px');
+    expect(screen.getByRole('button', { name: 'L' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('shows an error state with retry when loading fails', async () => {

@@ -9,6 +9,7 @@ import {
   layoutRow,
   packLanes,
   ROW_METRICS,
+  ROW_METRICS_COMPACT,
   rowHeight,
   visualDayInterval,
   weekIndexToRange,
@@ -190,7 +191,9 @@ describe('packLanes', () => {
 describe('row metrics', () => {
   it('reserves at least one lane and honours the minimum height', () => {
     expect(rowHeight(0)).toBe(rowHeight(1));
-    expect(rowHeight(1)).toBe(Math.max(ROW_METRICS.minHeight, 22 + 24 + 8));
+    expect(rowHeight(1)).toBe(48);
+    expect(rowHeight(2)).toBe(72);
+    expect(rowHeight(3)).toBe(96);
   });
 
   it('grows by bar height + gap per extra lane', () => {
@@ -199,7 +202,7 @@ describe('row metrics', () => {
 
   it('maps lanes to y and back', () => {
     expect(laneTop(0)).toBe(ROW_METRICS.headerStrip);
-    expect(laneTop(2)).toBe(ROW_METRICS.headerStrip + 2 * 28);
+    expect(laneTop(2)).toBe(ROW_METRICS.headerStrip + 2 * 24);
     expect(yToLane(laneTop(2) + 5)).toBe(2);
     expect(yToLane(0)).toBe(0);
   });
@@ -219,7 +222,20 @@ describe('layoutRow', () => {
     expect(b).toMatchObject({ lane: 1, y: laneTop(1), x: 90, width: 190, firstWeekIndex: 1, height: ROW_METRICS.barHeight });
   });
 
+  it('collapses more than maxLanes lanes into a "+N weitere" lane unless expanded', () => {
+    const items = ['a', 'b', 'c', 'd', 'e'].map((id) => asg(id, '2026-11-23', '2026-12-11'));
+    const row = layoutRow(geom, items);
+    expect(row.laneCount).toBe(5);
+    expect(row.bars.map((b) => b.lane)).toEqual([0, 1]);
+    expect(row).toMatchObject({ hiddenCount: 3, overflowLane: 2, height: rowHeight(3) });
+    const open = layoutRow(geom, items, ROW_METRICS, true);
+    expect(open).toMatchObject({ hiddenCount: 0, overflowLane: -1, height: rowHeight(5) });
+    expect(open.bars).toHaveLength(5);
+    const compact = layoutRow(geom, items, ROW_METRICS_COMPACT);
+    expect(compact).toMatchObject({ hiddenCount: 4, overflowLane: 1, height: 64 });
+  });
+
   it('returns a single-lane height for an empty row', () => {
-    expect(layoutRow(geom, [])).toEqual({ bars: [], laneCount: 0, height: rowHeight(0) });
+    expect(layoutRow(geom, [])).toEqual({ bars: [], laneCount: 0, height: rowHeight(0), hiddenCount: 0, overflowLane: -1 });
   });
 });

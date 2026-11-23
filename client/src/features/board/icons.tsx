@@ -54,3 +54,50 @@ export const AlertIcon = createIcon({
     </g>
   ),
 });
+
+export const ChevronDownIcon = createIcon({
+  displayName: 'ChevronDownIcon',
+  viewBox: '0 0 24 24',
+  path: <path {...stroke} d="M6 9l6 6 6-6" />,
+});
+
+export const CloseIcon = createIcon({
+  displayName: 'CloseIcon',
+  viewBox: '0 0 24 24',
+  path: <path {...stroke} d="M18 6L6 18M6 6l12 12" />,
+});
+
+export const SlidersIcon = createIcon({
+  displayName: 'SlidersIcon',
+  viewBox: '0 0 24 24',
+  path: <path {...stroke} d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0M14 4v4M8 10v4M16 16v4" />,
+});
+
+/** Board / planning grid (navigation). */
+export const BoardIcon = createIcon({
+  displayName: 'BoardIcon',
+  viewBox: '0 0 24 24',
+  path: (
+    <g {...stroke}>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M3 9h18M7 13h6M10 16.5h7" />
+    </g>
+  ),
+});
+
+export const UsersIcon = createIcon({
+  displayName: 'UsersIcon',
+  viewBox: '0 0 24 24',
+  path: (
+    <g {...stroke}>
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M2.5 20a6.5 6.5 0 0113 0M16 4.6a3.5 3.5 0 010 6.8M18 14.2a6.5 6.5 0 013.5 5.8" />
+    </g>
+  ),
+});
+
+export const FolderIcon = createIcon({
+  displayName: 'FolderIcon',
+  viewBox: '0 0 24 24',
+  path: <path {...stroke} d="M3 7a2 2 0 012-2h4l2 2.5h8a2 2 0 012 2V17a2 2 0 01-2 2H5a2 2 0 01-2-2z" />,
+});

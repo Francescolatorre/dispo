@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
-import { Alert, AlertDescription, AlertIcon, Box, Button, Flex, Skeleton, Stack, Text } from '@chakra-ui/react';
+import { Alert, AlertDescription, AlertIcon, Box, Button, Flex, Text } from '@chakra-ui/react';
 import { addDays, addWeeks, isoWeekKey, startOfISOWeek, todayISO } from '../../domain/dates';
 import { projectColor } from '../../domain/projectColors';
 import type { Assignment, ISODate, Project } from '../../domain/types';
@@ -22,7 +22,18 @@ import { dragHint, hypotheticalAssignments, isUnchanged, projectLoads } from './
 import { useActionFeedback } from './interactions/useActionFeedback';
 import { useGridDrag, type DragCommit } from './interactions/useGridDrag';
 import { useUndoShortcuts } from './interactions/useUndoShortcuts';
-import { barSpan, createGeometry, laneTop, layoutRow, type ColumnWidth, type RowLayout } from './layout';
+import {
+  barSpan,
+  createGeometry,
+  DEFAULT_COLUMN_WIDTH,
+  laneTop,
+  layoutRow,
+  NAME_COLUMN_WIDTHS,
+  rowMetricsFor,
+  type ColumnWidth,
+  type Density,
+  type RowLayout,
+} from './layout';
 
 export interface PlanningBoardProps {
   /** Reference day (default: today). Injected by tests. */
@@ -30,15 +41,6 @@ export interface PlanningBoardProps {
   /** Called when a project bar is clicked/activated (in addition to opening the edit drawer). */
   onAssignmentSelect?: (assignmentId: string) => void;
 }
-
-const BoardSkeleton = () => (
-  <Stack spacing={2} data-testid="board-loading" aria-busy="true" aria-label="Lade Planungsdaten">
-    <Skeleton h="66px" borderRadius="lg" />
-    {Array.from({ length: 8 }, (_, i) => (
-      <Skeleton key={i} h="52px" borderRadius="md" />
-    ))}
-  </Stack>
-);
 
 /**
  * Planning board: people × ISO weeks with workload heat cells and project bars.
@@ -51,7 +53,10 @@ export function PlanningBoard({ today: todayProp, onAssignmentSelect }: Planning
   const [today] = useState<ISODate>(() => todayProp ?? todayISO());
   const homeStart = useMemo(() => defaultRangeStart(today), [today]);
   const [rangeStart, setRangeStart] = useState<ISODate>(homeStart);
-  const [columnWidth, setColumnWidth] = useState<ColumnWidth>(96);
+  const [columnWidth, setColumnWidth] = useState<ColumnWidth>(DEFAULT_COLUMN_WIDTH);
+  const [density] = useState<Density>('comfort');
+  const [expandedRows, setExpandedRows] = useState<ReadonlySet<string>>(() => new Set());
+  const [todayToken, setTodayToken] = useState(0);
   const [filters, setFilters] = useState<BoardFilters>(DEFAULT_FILTERS);
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [editorKey, setEditorKey] = useState(0);
@@ -77,11 +82,21 @@ export function PlanningBoard({ today: todayProp, onAssignmentSelect }: Planning
     return map;
   }, [assignments]);
 
+  const metrics = rowMetricsFor(density);
   const rowLayouts = useMemo(() => {
     const map = new Map<string, RowLayout>();
-    for (const e of employees) map.set(e.id, layoutRow(geometry, assignmentsByEmployee.get(e.id) ?? []));
+    for (const e of employees) map.set(e.id, layoutRow(geometry, assignmentsByEmployee.get(e.id) ?? [], metrics, expandedRows.has(e.id)));
     return map;
-  }, [employees, assignmentsByEmployee, geometry]);
+  }, [employees, assignmentsByEmployee, geometry, metrics, expandedRows]);
+  const toggleExpanded = useCallback(
+    (id: string) =>
+      setExpandedRows((rows) => {
+        const next = new Set(rows);
+        if (!next.delete(id)) next.add(id);
+        return next;
+      }),
+    [],
+  );
 
   const projectsById = useMemo(() => new Map<string, Project>(projects.map((p) => [p.id, p])), [projects]);
   const sortedProjects = useMemo(() => [...projects].sort((a, b) => a.name.localeCompare(b.name, 'de')), [projects]);
@@ -99,7 +114,10 @@ export function PlanningBoard({ today: todayProp, onAssignmentSelect }: Planning
   const patchFilters = useCallback((patch: Partial<BoardFilters>) => setFilters((f) => ({ ...f, ...patch })), []);
   const resetFilters = useCallback(() => setFilters((f) => ({ ...DEFAULT_FILTERS, showInactive: f.showInactive })), []);
   const shift = useCallback((n: number) => setRangeStart((s) => addWeeks(s, n)), []);
-  const goToday = useCallback(() => setRangeStart(homeStart), [homeStart]);
+  const goToday = useCallback(() => {
+    setRangeStart(homeStart);
+    setTodayToken((t) => t + 1);
+  }, [homeStart]);
   const toggleOverbooked = useCallback(
     () => setFilters((f) => ({ ...f, onlyOverbooked: !f.onlyOverbooked, onlyFree: false })),
     [],
@@ -182,7 +200,9 @@ export function PlanningBoard({ today: todayProp, onAssignmentSelect }: Planning
     const dragged = previewId ? assignmentsById.get(previewId) : undefined;
     const project = dragged ? projectsById.get(dragged.projectId) : undefined;
     const sameRow = dragged && dragged.employeeId === previewTarget.employeeId;
-    const y = sameRow ? (rowLayouts.get(dragged.employeeId)?.bars.find((b) => b.assignment.id === dragged.id)?.y ?? laneTop(0)) : laneTop(0);
+    const y = sameRow
+      ? (rowLayouts.get(dragged.employeeId)?.bars.find((b) => b.assignment.id === dragged.id)?.y ?? laneTop(0, metrics))
+      : laneTop(0, metrics);
     return {
       employeeId: previewTarget.employeeId,
       x: span.x,
@@ -192,7 +212,7 @@ export function PlanningBoard({ today: todayProp, onAssignmentSelect }: Planning
       over: projection.hint.over,
       label: dragged ? `${project?.name ?? 'Einsatz'} · ${dragged.allocation} %` : 'Neuer Einsatz',
     };
-  }, [previewTarget, previewId, projection, geometry, assignmentsById, projectsById, rowLayouts]);
+  }, [previewTarget, previewId, projection, geometry, assignmentsById, projectsById, rowLayouts, metrics]);
 
   const dragging = useMemo(
     () => (previewId && previewOrigin ? { assignmentId: previewId, employeeId: previewOrigin } : null),
@@ -258,8 +278,6 @@ export function PlanningBoard({ today: todayProp, onAssignmentSelect }: Planning
     );
   }
 
-  if (loading) return <BoardSkeleton />;
-
   return (
     <Flex direction="column" gap={4} flex={1} minH={0}>
       <BoardInsights
@@ -293,37 +311,46 @@ export function PlanningBoard({ today: todayProp, onAssignmentSelect }: Planning
           onRedo,
         }}
       />
-      {employees.length === 0 ? (
-        <EmptyState title="Noch keine Personen angelegt" text="Lege unter „Personen“ dein Team an, um mit der Planung zu beginnen." />
-      ) : visibleEmployees.length === 0 ? (
-        <EmptyState
-          title="Keine Personen passen zu den Filtern"
-          text="Passe Suche oder Filter an, um wieder Personen zu sehen."
-          action={
-            <Button size="sm" onClick={resetFilters}>
-              Filter zurücksetzen
-            </Button>
-          }
-        />
-      ) : (
-        <BoardGrid
-          employees={visibleEmployees}
-          weeks={weeks}
-          geometry={geometry}
-          matrix={matrix}
-          rowLayouts={rowLayouts}
-          projectsById={projectsById}
-          today={today}
-          currentWeekKey={isoWeekKey(today)}
-          highlightProjectId={filters.projectId}
-          onAssignmentSelect={selectAssignment}
-          interactionProps={interactionProps}
-          contentRef={contentRef}
-          projection={projection}
-          ghost={ghost}
-          dragging={dragging}
-        />
-      )}
+      <BoardGrid
+        employees={visibleEmployees}
+        personCount={visibleEmployees.length}
+        weeks={weeks}
+        geometry={geometry}
+        matrix={matrix}
+        rowLayouts={rowLayouts}
+        projectsById={projectsById}
+        today={today}
+        currentWeekKey={isoWeekKey(today)}
+        highlightProjectId={filters.projectId}
+        metrics={metrics}
+        nameColumnWidth={NAME_COLUMN_WIDTHS[density]}
+        compact={density === 'compact'}
+        expandedRows={expandedRows}
+        onToggleExpanded={toggleExpanded}
+        onAssignmentSelect={selectAssignment}
+        interactionProps={interactionProps}
+        contentRef={contentRef}
+        projection={projection}
+        ghost={ghost}
+        dragging={dragging}
+        loading={loading}
+        scrollToTodayToken={todayToken}
+        empty={
+          employees.length === 0 ? (
+            <EmptyState title="Noch keine Personen angelegt" text="Lege unter „Personen“ dein Team an, um mit der Planung zu beginnen." />
+          ) : (
+            <EmptyState
+              title="Keine Personen passen zu den Filtern"
+              text="Passe Suche oder Filter an, um wieder Personen zu sehen."
+              action={
+                <Button size="sm" variant="outline" onClick={resetFilters}>
+                  Filter zurücksetzen
+                </Button>
+              }
+            />
+          )
+        }
+      />
       {preview && projection && <DragHintBubble hint={projection.hint} clientX={preview.clientX} clientY={preview.clientY} />}
       {editor && <AssignmentDrawer key={editorKey} editor={editor} onClose={closeEditor} />}
     </Flex>
@@ -332,18 +359,8 @@ export function PlanningBoard({ today: todayProp, onAssignmentSelect }: Planning
 
 function EmptyState({ title, text, action }: { title: string; text: string; action?: ReactNode }) {
   return (
-    <Box
-      data-testid="board-empty"
-      bg="white"
-      borderWidth="1px"
-      borderStyle="dashed"
-      borderColor="gray.300"
-      borderRadius="lg"
-      py={14}
-      px={6}
-      textAlign="center"
-    >
-      <Text fontWeight="semibold" color="gray.800">
+    <Box data-testid="board-empty" px={6} py={10}>
+      <Text fontSize="md" fontWeight={600} color="gray.900">
         {title}
       </Text>
       <Text fontSize="sm" color="gray.500" mt={1} mb={action ? 4 : 0}>

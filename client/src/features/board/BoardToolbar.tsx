@@ -20,7 +20,7 @@ import { formatDate, hasActiveFilters, MIN_FREE_PERCENT, NAV_STEP_WEEKS, type Bo
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, RedoIcon, SearchIcon, UndoIcon } from './icons';
 import { COLUMN_WIDTHS, type ColumnWidth } from './layout';
 
-const ZOOM_LABELS: Record<ColumnWidth, string> = { 64: 'Kompakt', 96: 'Normal', 140: 'Weit' };
+const ZOOM_LABELS: Record<ColumnWidth, string> = { 56: 'S', 88: 'M', 128: 'L' };
 
 export interface BoardToolbarProps {
   weeks: readonly WeekRef[];
