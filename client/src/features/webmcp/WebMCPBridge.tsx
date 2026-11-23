@@ -18,6 +18,7 @@ const DONE_TITLES: Record<string, string> = {
   'Einsatz ändern': 'Einsatz geändert',
   'Einsatz verschieben': 'Einsatz verschoben',
   'Einsatz löschen': 'Einsatz gelöscht',
+  'Projekt anlegen': 'Projekt angelegt',
 };
 
 export const AGENT_SUFFIX = ' – durch KI-Assistent';

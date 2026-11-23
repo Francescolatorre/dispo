@@ -32,7 +32,7 @@ type Row = Record<string, unknown>;
 const rows = (r: ToolResult, key: string) => r[key] as Row[];
 
 describe('createPlanningTools — definitions', () => {
-  it('defines the nine tools with object schemas and hints', () => {
+  it('defines the ten tools with object schemas and hints', () => {
     const { tools } = setup();
     expect(Object.keys(tools)).toEqual(PLANNING_TOOL_NAMES);
     expect(PLANNING_TOOL_NAMES).toEqual([
@@ -42,6 +42,7 @@ describe('createPlanningTools — definitions', () => {
       'get_workload',
       'find_free_capacity',
       'create_assignment',
+      'create_project',
       'update_assignment',
       'delete_assignment',
       'undo_last_change',
@@ -97,6 +98,47 @@ describe('get_guide', () => {
     const bad = await call('get_guide', { topic: 'secrets' });
     expect(bad.ok).toBe(false);
     expect(bad.error).toMatch(/Unbekanntes topic/);
+  });
+});
+
+describe('create_project', () => {
+  it('dry-runs, creates with a free palette colour, then staffs it and undoes', async () => {
+    const { call, repo, events } = setup();
+    const before = (await repo.listProjects()).length;
+
+    const dry = await call('create_project', { name: 'Web CRM aufbauen', start: '2026-W50', end: '2027-W08', dryRun: true });
+    expect(dry.ok).toBe(true);
+    expect(dry.summary).toMatch(/^Vorschau/);
+    expect(await repo.listProjects()).toHaveLength(before);
+
+    const r = await call('create_project', { name: 'Web CRM aufbauen', start: '2026-W50', end: '2027-W08' });
+    expect(r.ok).toBe(true);
+    const project = r.project as Row;
+    expect(project).toMatchObject({ name: 'Web CRM aufbauen', start: '2026-12-07', end: '2027-02-26', status: 'planned' });
+    const used = (await repo.listProjects()).filter((p) => p.id !== project.id).map((p) => p.color);
+    const created = (await repo.listProjects()).find((p) => p.id === project.id)!;
+    expect(used).not.toContain(created.color);
+    expect(events.at(-1)).toMatchObject({ tool: 'create_project', label: 'Projekt anlegen' });
+
+    const staffed = await call('create_assignment', {
+      employeeName: 'Felix Becker', projectName: 'Web CRM aufbauen', start: '2026-W52', end: '2026-W53', allocation: 50,
+    });
+    expect(staffed.ok).toBe(true);
+
+    await call('undo_last_change', { expectedLabel: 'Einsatz anlegen' });
+    const undone = await call('undo_last_change', { expectedLabel: 'Projekt anlegen' });
+    expect(undone.ok).toBe(true);
+    expect(await repo.listProjects()).toHaveLength(before);
+  });
+
+  it('refuses duplicates, missing fields and invalid ranges', async () => {
+    const { call } = setup();
+    const dup = await call('create_project', { name: 'website-relaunch', start: '2026-W50', end: '2026-W52' });
+    expect(dup.ok).toBe(false);
+    expect(dup.error).toMatch(/existiert bereits/);
+    expect((await call('create_project', { name: 'X', start: '2026-W50' })).error).toMatch(/"end" fehlt/);
+    const reversed = await call('create_project', { name: 'Rückwärts', start: '2026-W52', end: '2026-W50' });
+    expect(reversed.ok).toBe(false);
   });
 });
 

@@ -41,10 +41,10 @@ describe('App', () => {
       (document as unknown as { modelContext: unknown }).modelContext = { registerTool };
       render(<App />);
       const status = await screen.findByTestId('webmcp-status');
-      expect(registerTool).toHaveBeenCalledTimes(9);
+      expect(registerTool).toHaveBeenCalledTimes(10);
       const nav = screen.getByRole('navigation', { name: 'Hauptnavigation' });
       expect(nav).toContainElement(status);
-      expect(status).toHaveAccessibleName(/^KI-Werkzeuge aktiv \(WebMCP\): 9 Planungswerkzeuge/);
+      expect(status).toHaveAccessibleName(/^KI-Werkzeuge aktiv \(WebMCP\): 10 Planungswerkzeuge/);
     });
   });
 });

@@ -68,6 +68,8 @@ function workflow(): Section {
     recipes: {
       'Wer hat Luft?': 'find_free_capacity(from, to, minFreePercent, role?) → Kandidaten sind nach minimaler freier Kapazität über ALLE Wochen sortiert.',
       'Person einplanen': 'list_projects (Laufzeit!) → find_free_capacity → create_assignment {dryRun:true} → create_assignment.',
+      'Neues Projekt staffen':
+        'list_projects (gibt es das Projekt schon?) → create_project {dryRun:true} → create_project → find_free_capacity für die Projektlaufzeit → je Person create_assignment {dryRun:true} → create_assignment.',
       'Überbuchung auflösen': 'get_workload für die Woche → betroffene Einsätze (assignmentIds) → update_assignment mit kleinerer allocation, shiftWeeks oder Übergabe an eine freie Person (employeeName) – jeweils erst dryRun.',
       'Einsatz verschieben': 'update_assignment {id, shiftWeeks: n} behält die Dauer bei.',
       'Fehler korrigieren': 'undo_last_change {expectedLabel: <undoLabel der eigenen Schreib-Antwort>} – so wird keine fremde Änderung zurückgenommen.',
@@ -90,7 +92,8 @@ function sops(): Section {
       'Statt zu löschen lieber verkürzen oder übergeben. Wenn gelöscht wird: Nutzer vorher fragen und danach auf Rückgängig hinweisen.',
     'SOP-8 Kleine Schritte': 'Mehrere Änderungen einzeln ausführen und berichten, damit jede einzeln rückgängig gemacht werden kann.',
     'SOP-9 Transparenz': 'Jede Änderung erscheint im Board als Toast „– durch KI-Assistent“. Der Agent fasst am Ende zusammen, was er geändert hat.',
-    'SOP-10 Keine Stammdatenpflege': 'Personen und Projekte anlegen/ändern macht der Mensch in der Oberfläche; die Werkzeuge planen nur Einsätze.',
+    'SOP-10 Stammdaten sparsam':
+      'Projekte nur auf ausdrücklichen Wunsch anlegen (create_project, erst dryRun) und vorher mit list_projects prüfen, ob es das Projekt schon gibt. Personen anlegen/ändern sowie Projekte ändern oder löschen macht der Mensch in der Oberfläche.',
   };
 }
 
@@ -117,6 +120,7 @@ function tools(): Section {
       find_free_capacity: 'Kandidaten mit freier Kapazität im Zeitraum.',
     },
     write: {
+      create_project: 'Projekt anlegen (dryRun möglich, nur auf ausdrücklichen Wunsch).',
       create_assignment: 'Einsatz anlegen (dryRun möglich).',
       update_assignment: 'Zeitraum, Prozent, Rolle ändern, verschieben (shiftWeeks) oder übergeben (dryRun möglich).',
       delete_assignment: 'Einsatz löschen (dryRun möglich, rückgängig machbar).',

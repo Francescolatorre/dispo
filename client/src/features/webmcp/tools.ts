@@ -19,6 +19,7 @@ import {
 } from '../../domain/types';
 import type { ValidationIssue } from '../../domain/validation';
 import { computeWorkloadMatrix, findFreeCapacity } from '../../domain/workload';
+import { PROJECT_COLORS } from '../../domain/projectColors';
 import { GUIDE_TOPICS, buildGuide, type GuideTopic } from './guide';
 import type { JsonSchema, ModelContextTool, ToolResult } from './modelContext';
 
@@ -378,6 +379,27 @@ const SCHEMAS = {
     required: ['start', 'end', 'allocation'],
     additionalProperties: false,
   },
+  create_project: {
+    type: 'object',
+    properties: {
+      name: { type: 'string', description: 'Projektname, z. B. "Web CRM aufbauen". Muss eindeutig sein.' },
+      start: dateOrWeek('Projektstart.'),
+      end: dateOrWeek('Projektende (inklusiv).'),
+      status: {
+        type: 'string',
+        enum: [...PROJECT_STATUSES],
+        description: 'Optional. Standard: "active", wenn der Start heute oder früher ist, sonst "planned".',
+      },
+      color: {
+        type: 'string',
+        enum: [...PROJECT_COLORS],
+        description: 'Optional. Standard: eine Palettenfarbe, die noch kein Projekt nutzt.',
+      },
+      dryRun: { type: 'boolean', default: false, description: 'true = nur prüfen, nichts speichern.' },
+    },
+    required: ['name', 'start', 'end'],
+    additionalProperties: false,
+  },
   update_assignment: {
     type: 'object',
     properties: {
@@ -705,6 +727,64 @@ export function createPlanningTools(getContext: PlanningToolContextGetter, hooks
       },
     },
     {
+      name: 'create_project',
+      title: 'Projekt anlegen',
+      description:
+        'Legt ein neues Projekt an (Name, Laufzeit, optional Status und Farbe), damit danach mit create_assignment Personen eingeplant werden können. ' +
+        'Nur auf ausdrücklichen Wunsch des Nutzers; erst mit dryRun prüfen. Namen müssen eindeutig sein – existiert ein ähnliches Projekt, wird es gemeldet. ' +
+        'Rückgängig mit undo_last_change.',
+      readOnly: false,
+      handler: async (ctx, input) => {
+        const name = optString(input, 'name');
+        if (!name) return failure('Parameter "name" fehlt.');
+        const start = optDate(input, 'start', 'start');
+        const end = optDate(input, 'end', 'end');
+        if (!start || !end) return failure('Parameter "start" und "end" sind erforderlich.');
+        const dryRun = optBoolean(input, 'dryRun') ?? false;
+        const q = normalize(name);
+        const same = ctx.projects.find((p) => normalize(p.name) === q);
+        if (same) {
+          return failure(`Ein Projekt "${same.name}" existiert bereits. Verwende es (projectId "${same.id}") statt ein neues anzulegen.`, {
+            existing: describeProject(same),
+          });
+        }
+        const similar = ctx.projects.filter((p) => normalize(p.name).includes(q) || q.includes(normalize(p.name)));
+        const status = optString(input, 'status') ?? (start <= ctx.today ? 'active' : 'planned');
+        if (!(PROJECT_STATUSES as readonly string[]).includes(status)) {
+          return failure(`Unbekannter Status "${status}". Erlaubt: ${PROJECT_STATUSES.join(', ')}.`);
+        }
+        const used = new Set(ctx.projects.map((p) => p.color));
+        const color =
+          optString(input, 'color') ?? PROJECT_COLORS.find((c) => !used.has(c)) ?? PROJECT_COLORS[ctx.projects.length % PROJECT_COLORS.length];
+        const result = await ctx.actions.createProject(
+          { name, start, end, status: status as Project['status'], color },
+          { dryRun },
+        );
+        if (!result.ok) {
+          return {
+            ok: false,
+            error: 'Projekt nicht angelegt: ' + issueText(result.errors).join(' '),
+            errors: result.errors.map((e) => ({ code: e.code, field: e.field, message: e.message })),
+            warnings: issueText(result.warnings),
+          };
+        }
+        const summary = `${dryRun ? 'Vorschau (nicht gespeichert): ' : ''}Projekt "${name}" (${start} bis ${end}, ${status}) ${dryRun ? 'würde angelegt' : 'angelegt'}.`;
+        if (!dryRun) notify({ tool: 'create_project', kind: 'write', label: 'Projekt anlegen', summary });
+        return {
+          ok: true,
+          dryRun,
+          summary,
+          project: dryRun ? { name, start, end, status, color } : describeProject(result.result),
+          warnings: [
+            ...issueText(result.warnings),
+            ...(similar.length > 0 ? [`Ähnliche Projekte existieren bereits: ${similar.map((p) => p.name).join(', ')}.`] : []),
+          ],
+          nextStep: 'Personen mit find_free_capacity suchen und mit create_assignment (projectId oder projectName) einplanen.',
+          ...(dryRun ? {} : { undoLabel: ctx.actions.undoLabel(), undoHint: 'Rückgängig machen mit undo_last_change.' }),
+        };
+      },
+    },
+    {
       name: 'undo_last_change',
       title: 'Letzte Änderung rückgängig machen',
       description:
@@ -728,7 +808,8 @@ export function createPlanningTools(getContext: PlanningToolContextGetter, hooks
     },
   ];
 
-  return specs.map((spec) => {
+  const order = (s: ToolSpec) => PLANNING_TOOL_NAMES.indexOf(s.name);
+  return [...specs].sort((a, b) => order(a) - order(b)).map((spec) => {
     const schema: JsonSchema = SCHEMAS[spec.name];
     return {
       name: spec.name,

@@ -113,13 +113,14 @@ test.describe('WebMCP', () => {
     });
   });
 
-  test('registers the 9 planning tools and find_free_capacity returns candidates', async ({ page }) => {
+  test('registers the 10 planning tools and find_free_capacity returns candidates', async ({ page }) => {
     await openBoard(page);
     await expect(page.getByTestId('webmcp-status')).toBeVisible();
 
     const names = await page.evaluate(() => Object.keys((window as unknown as { __webmcpTools: object }).__webmcpTools).sort());
     expect(names).toEqual([
       'create_assignment',
+      'create_project',
       'delete_assignment',
       'find_free_capacity',
       'get_guide',
