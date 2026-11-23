@@ -29,7 +29,8 @@ describe('PlanningBoard', () => {
     expect(bodyRows()).toHaveLength(13); // 14 seeded, 1 inactive hidden by default
 
     const headers = within(grid).getAllByRole('columnheader');
-    expect(headers).toHaveLength(18); // "Person" + 17 weeks
+    expect(headers).toHaveLength(18); // corner + 17 weeks
+    expect(headers[0]).toHaveTextContent('13 Personen');
     expect(headers[1]).toHaveTextContent('KW 46');
     expect(headers[1]).toHaveTextContent('09.11.');
     expect(headers[17]).toHaveTextContent('KW 9');
@@ -41,13 +42,12 @@ describe('PlanningBoard', () => {
     expect(screen.getByTestId('row-count')).toHaveTextContent('13 von 13 Personen');
   });
 
-  it('shows name, role · seniority and a capacity badge for part-timers', async () => {
+  it('shows name, role · seniority and the capacity of part-timers as neutral meta text', async () => {
     setup();
     await screen.findByRole('grid');
     const sophie = bodyRows().find((r) => r.textContent?.includes('Sophie Weber'))!;
     const header = within(sophie).getByRole('rowheader');
-    expect(header).toHaveTextContent('Design · Professional');
-    expect(header).toHaveTextContent('80 %');
+    expect(header).toHaveTextContent('Design · Prof. · 80 % Kap.');
     const anna = within(bodyRows()[0]).getByRole('rowheader');
     expect(anna).toHaveTextContent('Anna Schmidt');
     expect(anna).not.toHaveTextContent('%');
@@ -94,7 +94,8 @@ describe('PlanningBoard', () => {
   it('filters by role', async () => {
     const { user } = setup();
     await screen.findByRole('grid');
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Rolle filtern' }), 'Backend');
+    await user.click(screen.getByRole('button', { name: 'Rolle filtern' }));
+    await user.click(await screen.findByRole('menuitemradio', { name: 'Backend' }));
     const names = rowNames();
     expect(names).toHaveLength(3);
     expect(names.join()).toMatch(/Lukas Müller.*Jonas Fischer.*Paul Richter/);
@@ -103,7 +104,8 @@ describe('PlanningBoard', () => {
   it('filters by project and dims bars of other projects', async () => {
     const { user } = setup();
     await screen.findByRole('grid');
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Projekt filtern' }), 'Security-Audit');
+    await user.click(screen.getByRole('button', { name: 'Projekt filtern' }));
+    await user.click(await screen.findByRole('menuitemradio', { name: 'Security-Audit' }));
     const names = rowNames();
     expect(names).toHaveLength(3);
     expect(names.join()).toMatch(/Jonas Fischer.*Laura Hoffmann.*Maximilian Schulz/);
@@ -114,7 +116,16 @@ describe('PlanningBoard', () => {
     expect(getComputedStyle(other).opacity).not.toBe('1');
   });
 
-  it('shows only people with free capacity when the toggle is on', async () => {
+  it('reads ?q= and ?project= as initial filters', async () => {
+    const repository = new LocalRepository({ storage: null, today: TODAY });
+    renderWithProviders(<PlanningBoard today={TODAY} />, { repository, route: '/?q=jonas&project=prj-03' });
+    await screen.findByRole('grid');
+    expect(rowNames()).toEqual([expect.stringContaining('Jonas Fischer')]);
+    expect(screen.getByRole('searchbox', { name: 'Person suchen' })).toHaveValue('jonas');
+    expect(screen.getByRole('button', { name: 'Projekt filtern' })).toHaveTextContent('Projekt: Security-Audit');
+  });
+
+  it('shows only people with free capacity when the "mit Luft" chip is pressed', async () => {
     const { user } = setup();
     await screen.findByRole('grid');
     const seed = createSeed(TODAY);
@@ -122,7 +133,10 @@ describe('PlanningBoard', () => {
     expect(expected.size).toBeGreaterThan(0);
     expect(expected.size).toBeLessThan(13);
 
-    await user.click(screen.getByRole('checkbox', { name: 'Nur mit freier Kapazität' }));
+    const chip = screen.getByRole('button', { name: /mit Luft/ });
+    expect(chip).toHaveTextContent(`${expected.size} mit Luft`);
+    await user.click(chip);
+    expect(chip).toHaveAttribute('aria-pressed', 'true');
     const ids = bodyRows().map((r) => r.getAttribute('data-employee-id'));
     expect(new Set(ids)).toEqual(expected);
   });
@@ -131,22 +145,26 @@ describe('PlanningBoard', () => {
     const { user } = setup();
     await screen.findByRole('grid');
     const over = screen.getByRole('button', { name: /überbuchte Personenwochen/ });
-    expect(over).toHaveTextContent('2');
+    expect(over).toHaveTextContent('2 überbucht');
     await user.click(over);
     expect(over).toHaveAttribute('aria-pressed', 'true');
     expect(rowNames()).toEqual([expect.stringContaining('Jonas Fischer')]);
 
-    const free = screen.getByRole('button', { name: /freier Kapazität/ });
+    const free = screen.getByRole('button', { name: /mit Luft/ });
     await user.click(free);
     expect(over).toHaveAttribute('aria-pressed', 'false');
-    expect(screen.getByRole('checkbox', { name: 'Nur mit freier Kapazität' })).toBeChecked();
+    expect(free).toHaveAttribute('aria-pressed', 'true');
+    // Only one control drives the free-capacity filter (no duplicate switch).
+    expect(screen.queryByRole('checkbox', { name: /freier Kapazität/ })).not.toBeInTheDocument();
   });
 
   it('shows inactive people on demand', async () => {
     const { user } = setup();
     await screen.findByRole('grid');
     expect(screen.queryByText('Niklas Neumann')).not.toBeInTheDocument();
-    await user.click(screen.getByRole('checkbox', { name: 'Inaktive zeigen' }));
+    expect(screen.getByTestId('row-count')).toHaveTextContent('1 inaktiv ausgeblendet');
+    await user.click(screen.getByRole('button', { name: /Ansicht/ }));
+    await user.click(await screen.findByRole('menuitemcheckbox', { name: 'Inaktive zeigen' }));
     expect(bodyRows()).toHaveLength(14);
     expect(screen.getByText('Niklas Neumann')).toBeInTheDocument();
   });
@@ -167,7 +185,7 @@ describe('PlanningBoard', () => {
     const grid = await screen.findByRole('grid');
     const firstWeek = () => weekHeaders()[0];
     expect(firstWeek()).toHaveTextContent('KW 46');
-    expect(screen.getByRole('button', { name: 'Heute' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Heute' })).toBeEnabled(); // never disabled
 
     await user.click(screen.getByRole('button', { name: '4 Wochen vor' }));
     expect(firstWeek()).toHaveTextContent('KW 50');

@@ -22,3 +22,8 @@ if (!window.matchMedia) {
     }),
   });
 }
+
+// jsdom has no Element#scrollTo; Chakra's Menu calls it when it opens.
+if (!Element.prototype.scrollTo) {
+  Element.prototype.scrollTo = () => {};
+}

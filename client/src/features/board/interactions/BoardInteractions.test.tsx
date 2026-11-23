@@ -237,7 +237,7 @@ describe('board interactions', () => {
 
     fireEvent.keyDown(document.body, { key: 'z', ctrlKey: true });
     await waitFor(async () => expect(await get(JONAS_RELEASE)).toMatchObject({ end: '2026-12-11' }));
-    expect(screen.getByRole('button', { name: 'Wiederherstellen: Einsatz ändern' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Wiederherstellen: Einsatz geändert' })).toBeEnabled();
 
     fireEvent.keyDown(document.body, { key: 'Z', ctrlKey: true, shiftKey: true });
     await waitFor(async () => expect(await get(JONAS_RELEASE)).toMatchObject({ end: '2026-12-18' }));
@@ -259,7 +259,7 @@ describe('board interactions', () => {
     expect(screen.getByRole('button', { name: 'Rückgängig' })).toBeDisabled();
 
     fireEvent.keyDown(bar(JONAS_RELEASE), { key: 'ArrowLeft' });
-    expect(await screen.findByRole('button', { name: 'Rückgängig: Einsatz verschieben' })).toBeEnabled();
+    expect(await screen.findByRole('button', { name: 'Rückgängig: Einsatz verschoben' })).toBeEnabled();
 
     await user.click(screen.getByRole('button', { name: 'Einsatz' }));
     const dialog = await screen.findByRole('dialog', { name: 'Einsatz anlegen' });

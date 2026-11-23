@@ -1,6 +1,6 @@
 import { LocalRepository } from '../data/localRepository';
 import { addDays, addWeeks, startOfISOWeek, weekRef } from './dates';
-import { createPlanningActions, snapshotFromRepository, type ActionResult } from './planningActions';
+import { createPlanningActions, historyLabelText, snapshotFromRepository, type ActionResult } from './planningActions';
 import type { AssignmentInput } from './types';
 
 const TODAY = '2026-11-21';
@@ -325,5 +325,15 @@ describe('employee and project CRUD', () => {
     const r = await actions.createProject(input);
     expectOk(r);
     expect(await repo.listProjects()).toHaveLength(8);
+  });
+});
+
+describe('historyLabelText', () => {
+  it('turns history labels into past-tense display text', () => {
+    expect(historyLabelText('Einsatz verschieben')).toBe('Einsatz verschoben');
+    expect(historyLabelText('Einsatz anlegen')).toBe('Einsatz angelegt');
+    expect(historyLabelText('Projekt ändern')).toBe('Projekt geändert');
+    expect(historyLabelText('Person löschen')).toBe('Person gelöscht');
+    expect(historyLabelText('Sonstiges')).toBe('Sonstiges');
   });
 });

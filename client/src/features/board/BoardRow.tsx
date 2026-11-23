@@ -4,7 +4,7 @@ import type { WeekRef } from '../../domain/dates';
 import { projectColorTokens } from '../../domain/projectColors';
 import type { Employee, Project, WeekKey } from '../../domain/types';
 import type { WeekLoad } from '../../domain/workload';
-import { formatDate, formatPercent, SENIORITY_LABELS, STATUS_LABELS, stripLabels, stripValue } from './boardModel';
+import { formatDate, formatPercent, SENIORITY_SHORT, STATUS_LABELS, stripLabels, stripValue } from './boardModel';
 import { AlertIcon, ChevronLeftIcon, ChevronRightIcon } from './icons';
 import { NAME_COLUMN_WIDTH, ROW_METRICS, type BarLayout, type BoardGeometry, type RowLayout, type RowMetrics } from './layout';
 
@@ -266,7 +266,7 @@ export const BoardRow = memo(function BoardRow({
   const weekLoads = weeks.map((w) => loads?.[w.key]);
   const runStarts = stripLabels(weekLoads, currentWeekIndex);
   const capacity = employee.capacity < 1 ? ` · ${Math.round(employee.capacity * 100)} % Kap.` : '';
-  const meta = `${employee.role} · ${SENIORITY_LABELS[employee.seniority]}${capacity}`;
+  const meta = `${employee.role} · ${SENIORITY_SHORT[employee.seniority]}${capacity}`;
   const ghostTokens = ghost ? projectColorTokens(ghost.color) : null;
   const canCollapse = expanded && layout.laneCount > metrics.maxLanes;
   const pitch = metrics.barHeight + metrics.laneGap;

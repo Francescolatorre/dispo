@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
-import { Alert, AlertDescription, AlertIcon, Box, Button, Flex, Text } from '@chakra-ui/react';
+import { Box, Button, Flex, Heading, HStack, IconButton, Text, Tooltip } from '@chakra-ui/react';
+import { useSearchParams } from 'react-router-dom';
 import { addDays, addWeeks, isoWeekKey, startOfISOWeek, todayISO } from '../../domain/dates';
+import { historyLabelText } from '../../domain/planningActions';
 import { projectColor } from '../../domain/projectColors';
 import type { Assignment, ISODate, Project } from '../../domain/types';
 import { computeWorkloadMatrix } from '../../domain/workload';
@@ -10,13 +12,15 @@ import {
   defaultRangeStart,
   DEFAULT_FILTERS,
   filterEmployees,
+  formatDate,
   visibleWeeks,
   type BoardFilters,
 } from './boardModel';
 import { BoardGrid } from './BoardGrid';
-import { BoardInsights } from './BoardInsights';
+import { BoardLegend } from './BoardLegend';
 import { BoardToolbar } from './BoardToolbar';
 import { AssignmentDrawer, type EditorState } from './interactions/AssignmentDrawer';
+import { AlertIcon, PlusIcon, RedoIcon, UndoIcon } from './icons';
 import { DragHintBubble } from './interactions/DragHintBubble';
 import { dragHint, hypotheticalAssignments, isUnchanged, projectLoads } from './interactions/dragMath';
 import { useActionFeedback } from './interactions/useActionFeedback';
@@ -34,6 +38,25 @@ import {
   type Density,
   type RowLayout,
 } from './layout';
+
+const DENSITY_KEY = 'dispo.board.density';
+
+/** Per-viewer convenience: the chosen density survives reloads (storage may be unavailable). */
+function readDensity(): Density {
+  try {
+    return window.localStorage.getItem(DENSITY_KEY) === 'compact' ? 'compact' : 'comfort';
+  } catch {
+    return 'comfort';
+  }
+}
+
+function writeDensity(density: Density) {
+  try {
+    window.localStorage.setItem(DENSITY_KEY, density);
+  } catch {
+    // ignore: density just is not remembered
+  }
+}
 
 export interface PlanningBoardProps {
   /** Reference day (default: today). Injected by tests. */
@@ -54,10 +77,20 @@ export function PlanningBoard({ today: todayProp, onAssignmentSelect }: Planning
   const homeStart = useMemo(() => defaultRangeStart(today), [today]);
   const [rangeStart, setRangeStart] = useState<ISODate>(homeStart);
   const [columnWidth, setColumnWidth] = useState<ColumnWidth>(DEFAULT_COLUMN_WIDTH);
-  const [density] = useState<Density>('comfort');
+  const [density, setDensityState] = useState<Density>(readDensity);
+  const setDensity = useCallback((d: Density) => {
+    setDensityState(d);
+    writeDensity(d);
+  }, []);
   const [expandedRows, setExpandedRows] = useState<ReadonlySet<string>>(() => new Set());
   const [todayToken, setTodayToken] = useState(0);
-  const [filters, setFilters] = useState<BoardFilters>(DEFAULT_FILTERS);
+  // `?q=<name>` and `?project=<id>` (links from Personen/Projekte) seed the initial filters.
+  const [searchParams] = useSearchParams();
+  const [filters, setFilters] = useState<BoardFilters>(() => ({
+    ...DEFAULT_FILTERS,
+    search: searchParams.get('q') ?? '',
+    projectId: searchParams.get('project') ?? '',
+  }));
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [editorKey, setEditorKey] = useState(0);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -266,50 +299,107 @@ export function PlanningBoard({ today: todayProp, onAssignmentSelect }: Planning
   const onRedo = useCallback(() => void redo(), [redo]);
   useUndoShortcuts(onUndo, onRedo, editor === null && !loading);
 
+  const first = weeks[0];
+  const last = weeks[weeks.length - 1];
+  const undoLabel = actions.undoLabel();
+  const redoLabel = actions.redoLabel();
+  const undoText = undoLabel ? `Rückgängig: ${historyLabelText(undoLabel)}` : undefined;
+  const redoText = redoLabel ? `Wiederherstellen: ${historyLabelText(redoLabel)}` : undefined;
+
+  const header = (
+    <Flex as="header" align="center" gap={3} minH="40px" wrap="wrap">
+      <Heading as="h1" size="lg">
+        Planung
+      </Heading>
+      <Text
+        fontSize="sm"
+        color="gray.500"
+        data-testid="visible-range"
+        aria-live="polite"
+        whiteSpace="nowrap"
+        sx={{ fontVariantNumeric: 'tabular-nums' }}
+      >
+        <Text as="span" color="gray.700" fontWeight={500}>
+          KW {first.week} – KW {last.week}
+        </Text>
+        {' · '}
+        {formatDate(first.start)} – {formatDate(last.end)}
+      </Text>
+      <HStack spacing={1} ml="auto">
+        <Tooltip label={undoText ? `${undoText} (Strg+Z)` : 'Nichts rückgängig zu machen'} openDelay={400}>
+          <IconButton
+            aria-label={undoText ?? 'Rückgängig'}
+            icon={<UndoIcon boxSize="16px" />}
+            variant="ghost"
+            isDisabled={!canUndo}
+            onClick={onUndo}
+          />
+        </Tooltip>
+        <Tooltip label={redoText ? `${redoText} (Strg+Umschalt+Z)` : 'Nichts wiederherzustellen'} openDelay={400}>
+          <IconButton
+            aria-label={redoText ?? 'Wiederherstellen'}
+            icon={<RedoIcon boxSize="16px" />}
+            variant="ghost"
+            isDisabled={!canRedo}
+            onClick={onRedo}
+          />
+        </Tooltip>
+        <Button leftIcon={<PlusIcon boxSize="14px" />} onClick={openCreate} ml={2} isDisabled={loading || Boolean(error)}>
+          Einsatz
+        </Button>
+      </HStack>
+    </Flex>
+  );
+
   if (error) {
     return (
-      <Alert status="error" borderRadius="lg" data-testid="board-error">
-        <AlertIcon />
-        <AlertDescription flex={1}>Planungsdaten konnten nicht geladen werden: {error.message}</AlertDescription>
-        <Button size="sm" colorScheme="red" variant="outline" onClick={() => void reload()}>
-          Erneut versuchen
-        </Button>
-      </Alert>
+      <Flex direction="column" gap={3} flex={1} minH={0}>
+        {header}
+        <Flex
+          data-testid="board-error"
+          role="alert"
+          align="center"
+          gap={3}
+          px={4}
+          py={3}
+          bg="white"
+          borderWidth="1px"
+          borderColor="line"
+          borderRadius="lg"
+          boxShadow="sm"
+        >
+          <AlertIcon boxSize="16px" color="load.over.fg" />
+          <Text flex={1} fontSize="sm" color="gray.800">
+            Planungsdaten konnten nicht geladen werden: {error.message}
+          </Text>
+          <Button variant="outline" onClick={() => void reload()}>
+            Erneut versuchen
+          </Button>
+        </Flex>
+      </Flex>
     );
   }
 
+  const hiddenInactive = filters.showInactive ? 0 : employees.filter((e) => !e.active).length;
+
   return (
-    <Flex direction="column" gap={4} flex={1} minH={0}>
-      <BoardInsights
-        insights={insights}
-        onlyOverbooked={filters.onlyOverbooked}
-        onlyFree={filters.onlyFree}
-        onToggleOverbooked={toggleOverbooked}
-        onToggleFree={toggleFree}
-      />
+    <Flex direction="column" gap={3} flex={1} minH={0}>
+      {header}
       <BoardToolbar
-        weeks={weeks}
-        isCurrentRange={rangeStart === homeStart}
         onShift={shift}
         onToday={goToday}
         columnWidth={columnWidth}
         onColumnWidthChange={setColumnWidth}
+        density={density}
+        onDensityChange={setDensity}
         filters={filters}
         onFiltersChange={patchFilters}
         onResetFilters={resetFilters}
         roles={roles}
         projects={sortedProjects}
-        visibleCount={visibleEmployees.length}
-        totalCount={totalCount}
-        onCreate={openCreate}
-        history={{
-          canUndo,
-          canRedo,
-          undoLabel: actions.undoLabel(),
-          redoLabel: actions.redoLabel(),
-          onUndo,
-          onRedo,
-        }}
+        insights={insights}
+        onToggleOverbooked={toggleOverbooked}
+        onToggleFree={toggleFree}
       />
       <BoardGrid
         employees={visibleEmployees}
@@ -335,6 +425,7 @@ export function PlanningBoard({ today: todayProp, onAssignmentSelect }: Planning
         dragging={dragging}
         loading={loading}
         scrollToTodayToken={todayToken}
+        footer={<BoardLegend visibleCount={visibleEmployees.length} totalCount={totalCount} hiddenInactive={hiddenInactive} />}
         empty={
           employees.length === 0 ? (
             <EmptyState title="Noch keine Personen angelegt" text="Lege unter „Personen“ dein Team an, um mit der Planung zu beginnen." />

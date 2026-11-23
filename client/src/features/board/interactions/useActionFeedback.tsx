@@ -4,7 +4,7 @@
  */
 import { useCallback } from 'react';
 import { useToast } from '@chakra-ui/react';
-import type { ActionResult } from '../../../domain/planningActions';
+import { historyLabelText, type ActionResult } from '../../../domain/planningActions';
 import type { Assignment } from '../../../domain/types';
 import { usePlanning } from '../../../state';
 import { ActionToast, type Tone } from './ActionToast';
@@ -42,14 +42,14 @@ export function useActionFeedback() {
 
   const undo = useCallback(async () => {
     const r = await actions.undo();
-    if (r.ok) show(`Rückgängig: ${r.label ?? 'Änderung'}`, [], 'info', undefined, 2500);
+    if (r.ok) show(`Rückgängig gemacht: ${r.label ? historyLabelText(r.label) : 'Änderung'}`, [], 'info', undefined, 2500);
     else if (r.label) show('Rückgängig fehlgeschlagen', [r.error ?? ''], 'error');
     return r;
   }, [actions, show]);
 
   const redo = useCallback(async () => {
     const r = await actions.redo();
-    if (r.ok) show(`Wiederhergestellt: ${r.label ?? 'Änderung'}`, [], 'info', undefined, 2500);
+    if (r.ok) show(`Wiederhergestellt: ${r.label ? historyLabelText(r.label) : 'Änderung'}`, [], 'info', undefined, 2500);
     else if (r.label) show('Wiederherstellen fehlgeschlagen', [r.error ?? ''], 'error');
     return r;
   }, [actions, show]);

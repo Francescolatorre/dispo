@@ -23,13 +23,13 @@ describe('Navigation data-source indicator', () => {
   it('shows the browser source', async () => {
     renderNav();
     await act(async () => {});
-    expect(screen.getByTestId('data-source')).toHaveTextContent('Datenquelle: Lokal (Browser)');
+    expect(screen.getByTestId('data-source')).toHaveAccessibleName('Datenquelle: Lokale Daten');
   });
 
   it('shows the server source', async () => {
     renderNav('api');
     await act(async () => {});
-    expect(screen.getByTestId('data-source')).toHaveTextContent('Datenquelle: Server');
+    expect(screen.getByTestId('data-source')).toHaveAccessibleName('Datenquelle: Server');
   });
 
   it('shows nothing while the source is still being chosen', async () => {

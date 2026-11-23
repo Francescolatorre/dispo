@@ -140,6 +140,14 @@ export const SENIORITY_LABELS: Record<Seniority, string> = {
   lead: 'Lead',
 };
 
+/** Short seniority for the dense board name block (full label in Personen). */
+export const SENIORITY_SHORT: Record<Seniority, string> = {
+  junior: 'Junior',
+  mid: 'Prof.',
+  senior: 'Senior',
+  lead: 'Lead',
+};
+
 export const STATUS_LABELS: Record<WorkloadStatus, string> = {
   free: 'frei',
   luft: 'mit Luft',

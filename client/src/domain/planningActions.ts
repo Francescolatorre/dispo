@@ -106,6 +106,24 @@ export interface PlanningActions {
   clearHistory(): void;
 }
 
+const PAST_TENSE: Record<string, string> = {
+  anlegen: 'angelegt',
+  ändern: 'geändert',
+  verschieben: 'verschoben',
+  löschen: 'gelöscht',
+};
+
+/**
+ * Display text of a history label in tooltips and toasts: `Einsatz verschieben` →
+ * `Einsatz verschoben` ("Rückgängig: Einsatz verschoben"). The labels themselves stay the
+ * stable identifiers that `undoLabel()` returns (they are compared by undo toasts and tools).
+ */
+export function historyLabelText(label: string): string {
+  const i = label.lastIndexOf(' ');
+  const verb = label.slice(i + 1);
+  return PAST_TENSE[verb] ? `${label.slice(0, i + 1)}${PAST_TENSE[verb]}` : label;
+}
+
 export interface PlanningActionsOptions {
   /** Awaited after every applied write, undo and redo (e.g. to re-read state). */
   onChange?: () => void | Promise<void>;
