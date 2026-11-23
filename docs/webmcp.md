@@ -15,6 +15,8 @@ Stand der API: W3C WebML CG Draft (Nov 2026), imperative API `document.modelCont
 
 Ohne WebMCP im Browser passiert nichts (kein Polyfill, keine zusätzliche Abhängigkeit). Nach erfolgreicher Registrierung zeigt die Seitenleiste „KI-Werkzeuge aktiv (WebMCP)“; im Dev-Build steht zusätzlich in der Konsole: `[WebMCP] 10 Werkzeuge registriert: …`.
 
+**Hinweis für DOM-lesende Agenten:** Die Seitenleiste enthält immer einen visuell versteckten Absatz (`data-testid="webmcp-agent-hint"`), den Agenten wie die Claude-in-Chrome-Erweiterung im Seitentext lesen. Er sagt, dass die Tools an `document.modelContext` (nicht `navigator`) hängen, wie man sie per `getTools()`/`executeTool(tool, {...})` aufruft und dass man mit `get_guide` beginnt; ohne WebMCP nennt er das fehlende Chrome-Flag.
+
 Die E2E-Smoke-Tests (`client/tests/smoke.spec.ts`) prüfen Registrierung und `find_free_capacity` mit einem Stub für `document.modelContext`.
 
 ## Tools

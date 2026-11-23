@@ -34,6 +34,7 @@ describe('App', () => {
       await screen.findByTestId('planning-summary');
       await act(async () => {});
       expect(screen.queryByTestId('webmcp-status')).toBeNull();
+      expect(screen.getByTestId('webmcp-agent-hint')).toHaveTextContent(/WebMCP nicht verfügbar/);
     });
 
     it('appears in the sidebar footer once the tools are registered', async () => {
@@ -45,6 +46,9 @@ describe('App', () => {
       const nav = screen.getByRole('navigation', { name: 'Hauptnavigation' });
       expect(nav).toContainElement(status);
       expect(status).toHaveAccessibleName(/^KI-Werkzeuge aktiv \(WebMCP\): 10 Planungswerkzeuge/);
+      const hint = screen.getByTestId('webmcp-agent-hint');
+      expect(hint).toHaveTextContent(/registriert 10 WebMCP-Werkzeuge an document\.modelContext/);
+      expect(hint).toHaveTextContent(/get_guide/);
     });
   });
 });
