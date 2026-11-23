@@ -4,6 +4,7 @@ import type { WeekRef } from '../../domain/dates';
 import type { Employee, Project, WeekKey } from '../../domain/types';
 import type { WeekLoad } from '../../domain/workload';
 import { formatDate, formatPercent, SENIORITY_LABELS, STATUS_LABELS } from './boardModel';
+import { projectColor } from '../../domain/projectColors';
 import { AlertIcon } from './icons';
 import { ROW_METRICS, type BarLayout, type BoardGeometry, type RowLayout } from './layout';
 
@@ -45,7 +46,7 @@ const HANDLE_WIDTH = 8;
 function cellLabel(employee: Employee, week: WeekRef, load: WeekLoad | undefined): string {
   if (!load) return `${employee.name}, KW ${week.week}`;
   const base = `${employee.name}, KW ${week.week}: ${formatPercent(load.utilization)} ausgelastet, ${STATUS_LABELS[load.status]}`;
-  return load.status === 'ok' || load.status === 'warning' ? `${base}, ${Math.round(load.freePercent)} % frei` : base;
+  return load.status === 'luft' || load.status === 'ok' ? `${base}, ${Math.round(load.freePercent)} % frei` : base;
 }
 
 const HeatLabel = ({ load }: { load: WeekLoad | undefined }) => {
@@ -61,7 +62,7 @@ const HeatLabel = ({ load }: { load: WeekLoad | undefined }) => {
   return (
     <HStack as="span" spacing="2px" aria-hidden color={`load.${load.status}.fg`}>
       {over && <AlertIcon boxSize="11px" />}
-      <Text as="span" fontSize="11px" fontWeight={over || load.status === 'warning' ? 'bold' : 'medium'} sx={{ fontVariantNumeric: 'tabular-nums' }}>
+      <Text as="span" fontSize="11px" fontWeight={over || load.status === 'full' ? 'bold' : 'medium'} sx={{ fontVariantNumeric: 'tabular-nums' }}>
         {formatPercent(load.utilization)}
       </Text>
     </HStack>
@@ -99,7 +100,7 @@ const ResizeHandle = ({ side }: { side: 'start' | 'end' }) => (
 const AssignmentBar = ({ bar, project, employee, dimmed, dragging, onSelect }: BarProps) => {
   const a = bar.assignment;
   const name = project?.name ?? 'Unbekanntes Projekt';
-  const color = project?.color ?? 'gray';
+  const color = projectColor(project?.color);
   const label = `${name} · ${a.allocation} %`;
   const period = `${formatDate(a.start)} – ${formatDate(a.end)}`;
   const aria = `${employee.name}: ${name}, ${a.allocation} %, ${formatDate(a.start)} bis ${formatDate(a.end)}${a.role ? `, Rolle ${a.role}` : ''}`;

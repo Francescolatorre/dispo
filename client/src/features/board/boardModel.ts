@@ -142,8 +142,9 @@ export const SENIORITY_LABELS: Record<Seniority, string> = {
 
 export const STATUS_LABELS: Record<WorkloadStatus, string> = {
   free: 'frei',
+  luft: 'mit Luft',
   ok: 'im Rahmen',
-  warning: 'voll ausgelastet',
+  full: 'voll',
   over: 'überbucht',
 };
 

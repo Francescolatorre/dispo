@@ -31,7 +31,7 @@ describe('ProjectsView', () => {
     expect(screen.getByTestId('projects-count')).toHaveTextContent('7 von 7 Projekten');
 
     const web = rowOf('Website-Relaunch');
-    expect(within(web).getByTestId('color-dot')).toHaveAttribute('data-color', 'blue');
+    expect(within(web).getByTestId('color-dot')).toHaveAttribute('data-color', 'cobalt');
     expect(web).toHaveTextContent('Aktiv');
     expect(web).toHaveTextContent('26.10.2026 – 08.01.2027');
     const cells = within(web).getAllByRole('cell');
@@ -72,14 +72,14 @@ describe('ProjectsView', () => {
     expect(within(group).queryByRole('radio', { name: /Rot|Orange|Gelb|Grün/ })).not.toBeInTheDocument();
 
     await user.type(within(drawer).getByRole('textbox', { name: /Name/ }), 'Intranet');
-    await user.click(within(group).getByRole('radio', { name: 'Petrol' }));
+    await user.click(within(group).getByRole('radio', { name: 'Traube' }));
     fireEvent.change(within(drawer).getByLabelText(/Start/), { target: { value: '2027-01-04' } });
     fireEvent.change(within(drawer).getByLabelText(/Ende/), { target: { value: '2027-03-26' } });
     await user.click(within(drawer).getByRole('button', { name: 'Anlegen' }));
 
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     const created = (await repository.listProjects()).find((p) => p.name === 'Intranet');
-    expect(created).toMatchObject({ color: 'teal', start: '2027-01-04', end: '2027-03-26', status: 'planned' });
+    expect(created).toMatchObject({ color: 'grape', start: '2027-01-04', end: '2027-03-26', status: 'planned' });
     expect(rowOf('Intranet')).toHaveTextContent('04.01.2027 – 26.03.2027');
   });
 

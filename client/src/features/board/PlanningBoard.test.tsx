@@ -62,10 +62,10 @@ describe('PlanningBoard', () => {
     expect(cell).toHaveAttribute('data-employee-id', 'emp-04');
     expect(cell).toHaveTextContent('120 %');
 
-    // Exactly 100 % is "voll ausgelastet", not overbooked.
-    expect(screen.getByRole('gridcell', { name: /^Lukas Müller, KW 48: 100 % ausgelastet, voll ausgelastet/ })).toHaveAttribute(
+    // Exactly 100 % is "voll" (neutral), not overbooked and not a warning.
+    expect(screen.getByRole('gridcell', { name: /^Lukas Müller, KW 48: 100 % ausgelastet, voll$/ })).toHaveAttribute(
       'data-status',
-      'warning',
+      'full',
     );
     expect(screen.getAllByRole('gridcell').filter((c) => c.getAttribute('data-status') === 'over')).toHaveLength(2);
   });

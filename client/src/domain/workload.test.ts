@@ -27,10 +27,13 @@ const asg = (employeeId: string, start: string, end: string, allocation: number)
 describe('workloadStatus', () => {
   it.each([
     [0, 'free'],
-    [10, 'ok'],
+    [10, 'luft'],
+    [50, 'luft'],
+    [50.01, 'ok'],
     [80, 'ok'],
-    [80.01, 'warning'],
-    [100, 'warning'],
+    [99.49, 'ok'],
+    [99.5, 'full'],
+    [100, 'full'],
     [100.01, 'over'],
     [150, 'over'],
   ])('%s %% → %s', (u, s) => expect(workloadStatus(u)).toBe(s));
@@ -66,14 +69,14 @@ describe('computeWeekLoad', () => {
     expect(l.assignmentIds).toEqual([]);
   });
 
-  it('part-time 0.8 at 80 % allocation is exactly 100 % utilization (warning, not over)', () => {
+  it('part-time 0.8 at 80 % allocation is exactly 100 % utilization (full, not over)', () => {
     const l = computeWeekLoad(emp('e1', { capacity: 0.8 }), [asg('e1', '2026-11-16', '2026-11-20', 80)], W47);
-    expect(l).toMatchObject({ load: 80, utilization: 100, freePercent: 0, status: 'warning' });
+    expect(l).toMatchObject({ load: 80, utilization: 100, freePercent: 0, status: 'full' });
   });
 
-  it('exactly 100 % on a full-timer is warning', () => {
+  it('exactly 100 % on a full-timer is full (voll), not a warning', () => {
     const a = [asg('e1', '2026-11-16', '2026-11-20', 60), asg('e1', '2026-11-16', '2026-11-20', 40)];
-    expect(computeWeekLoad(emp('e1'), a, W47)).toMatchObject({ utilization: 100, status: 'warning' });
+    expect(computeWeekLoad(emp('e1'), a, W47)).toMatchObject({ utilization: 100, status: 'full' });
   });
 
   it('above 100 % is over and has no free capacity', () => {
@@ -92,14 +95,14 @@ describe('computeWeekLoad', () => {
     const sixty = emp('e1', { capacity: 0.6 });
     expect(computeWeekLoad(sixty, [asg('e1', '2026-11-16', '2026-11-20', 50)], W47)).toMatchObject({
       utilization: 83.33,
-      status: 'warning',
+      status: 'ok',
     });
     expect(computeWeekLoad(sixty, [asg('e1', '2026-11-16', '2026-11-20', 70)], W47).status).toBe('over');
   });
 
   it('a part-week at 100 % on a 0.6 part-timer is 100 % (3 days of 5)', () => {
     const l = computeWeekLoad(emp('e1', { capacity: 0.6 }), [asg('e1', '2026-11-18', '2026-11-20', 100)], W47);
-    expect(l).toMatchObject({ load: 60, utilization: 100, status: 'warning' });
+    expect(l).toMatchObject({ load: 60, utilization: 100, status: 'full' });
   });
 
   it('lists contributing assignment ids', () => {
@@ -120,7 +123,7 @@ describe('computeWorkloadMatrix', () => {
     expect(Object.keys(m.e1)).toEqual(['2026-W47', '2026-W48', '2026-W49']);
     expect(m.e1['2026-W47'].status).toBe('free');
     expect(m.e1['2026-W48'].utilization).toBe(100);
-    expect(m.e2['2026-W49']).toMatchObject({ load: 50, utilization: 100, status: 'warning' });
+    expect(m.e2['2026-W49']).toMatchObject({ load: 50, utilization: 100, status: 'full' });
   });
 
   it('handles weeks across the 2026/2027 year boundary (W53)', () => {

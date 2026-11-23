@@ -45,8 +45,8 @@ describe('createAssignment', () => {
     expect(r.result.id).toMatch(/^asg-t/);
     expect(r.warnings).toEqual([]);
     expect(r.impact.map((i) => [i.weekKey, i.before, i.after, i.afterStatus])).toEqual([
-      [weekRef(mon(4)).key, 0, 50, 'ok'],
-      [weekRef(mon(5)).key, 0, 50, 'ok'],
+      [weekRef(mon(4)).key, 0, 50, 'luft'],
+      [weekRef(mon(5)).key, 0, 50, 'luft'],
     ]);
     expect(await repo.listAssignments({ employeeId: FELIX, from: mon(4) })).toHaveLength(1);
     expect(onChange).toHaveBeenCalledTimes(1);

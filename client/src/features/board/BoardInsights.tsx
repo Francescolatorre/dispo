@@ -109,10 +109,11 @@ export function BoardInsights({ insights, onlyOverbooked, onlyFree, onToggleOver
         <Text fontSize="xs" fontWeight="semibold" color="gray.500" textTransform="uppercase" letterSpacing="wider">
           Auslastung
         </Text>
-        <LegendItem swatch="load.free.swatch" label="frei" />
-        <LegendItem swatch="load.ok.swatch" label="bis 80 %" />
-        <LegendItem swatch="load.warning.swatch" label="81–100 %" />
-        <LegendItem swatch="load.over.swatch" label="über 100 % – überbucht">
+        <LegendItem swatch="load.free.bg" label="frei" />
+        <LegendItem swatch="load.luft.bg" label="bis 50 %" />
+        <LegendItem swatch="load.ok.bg" label="bis 99 %" />
+        <LegendItem swatch="load.full.bg" label="100 % – voll" />
+        <LegendItem swatch="load.over.bg" label="über 100 % – überbucht">
           <AlertIcon boxSize="8px" color="red.700" />
         </LegendItem>
         <HStack spacing={1.5}>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import { Alert, AlertDescription, AlertIcon, Box, Button, Flex, Skeleton, Stack, Text } from '@chakra-ui/react';
 import { addDays, addWeeks, isoWeekKey, startOfISOWeek, todayISO } from '../../domain/dates';
+import { projectColor } from '../../domain/projectColors';
 import type { Assignment, ISODate, Project } from '../../domain/types';
 import { computeWorkloadMatrix } from '../../domain/workload';
 import { usePlanning } from '../../state';
@@ -187,7 +188,7 @@ export function PlanningBoard({ today: todayProp, onAssignmentSelect }: Planning
       x: span.x,
       width: span.width,
       y,
-      color: project?.color ?? 'gray',
+      color: projectColor(project?.color),
       over: projection.hint.over,
       label: dragged ? `${project?.name ?? 'Einsatz'} · ${dragged.allocation} %` : 'Neuer Einsatz',
     };

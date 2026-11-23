@@ -61,9 +61,9 @@ describe('createSeed', () => {
     ]);
   });
 
-  it('has one person at exactly 100 % (warning, not over)', () => {
-    expect(load('Lukas Müller', 0)).toMatchObject({ utilization: 100, status: 'warning' });
-    expect(load('Lukas Müller', 3)).toMatchObject({ utilization: 100, status: 'warning' });
+  it('has one person at exactly 100 % (full, not over)', () => {
+    expect(load('Lukas Müller', 0)).toMatchObject({ utilization: 100, status: 'full' });
+    expect(load('Lukas Müller', 3)).toMatchObject({ utilization: 100, status: 'full' });
   });
 
   it('has people with free capacity next month', () => {

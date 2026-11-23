@@ -11,9 +11,27 @@
 import { listWeeks, overlapWorkdays, type WeekRef } from './dates';
 import type { Assignment, Employee, ISODate, WeekKey } from './types';
 
-export type WorkloadStatus = 'free' | 'ok' | 'warning' | 'over';
+/**
+ * Workload scale (utilization relative to capacity):
+ * - `free`  0 %                   → strong green, "frei"
+ * - `luft`  > 0 … ≤ 50 %          → light green tint (lots of room)
+ * - `ok`    > 50 … < 99.5 %       → neutral
+ * - `full`  ≥ 99.5 … ≤ 100 %      → neutral darker tint, "voll" (not a warning)
+ * - `over`  > 100 %               → red + icon, "überbucht"
+ * There is deliberately no amber level: exactly 100 % is a normal, fully planned week.
+ */
+export type WorkloadStatus = 'free' | 'luft' | 'ok' | 'full' | 'over';
 
-export const WORKLOAD_THRESHOLDS = { ok: 80, warning: 100 } as const;
+export const WORKLOAD_STATUSES: readonly WorkloadStatus[] = ['free', 'luft', 'ok', 'full', 'over'];
+
+export const WORKLOAD_THRESHOLDS = {
+  /** Up to this utilization (%) a week counts as "mit Luft". */
+  luft: 50,
+  /** From this utilization (%) on a week counts as "voll" (rounds to 100 %). */
+  full: 99.5,
+  /** Above this utilization (%) a week is overbooked. */
+  over: 100,
+} as const;
 
 export interface WeekLoad {
   employeeId: string;
@@ -38,9 +56,10 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 
 export function workloadStatus(utilization: number): WorkloadStatus {
   if (utilization <= 0) return 'free';
-  if (utilization <= WORKLOAD_THRESHOLDS.ok) return 'ok';
-  if (utilization <= WORKLOAD_THRESHOLDS.warning) return 'warning';
-  return 'over';
+  if (utilization > WORKLOAD_THRESHOLDS.over) return 'over';
+  if (utilization >= WORKLOAD_THRESHOLDS.full) return 'full';
+  if (utilization <= WORKLOAD_THRESHOLDS.luft) return 'luft';
+  return 'ok';
 }
 
 export function computeWeekLoad(

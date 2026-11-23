@@ -6,7 +6,7 @@
  *
  * Built-in story (asserted in seed.test.ts):
  * - Jonas Fischer is overbooked (120 %) in weeks 0 and +1 — the only two "over" cells.
- * - Lukas Müller sits at exactly 100 % (warning, not over) from week 0 to +3.
+ * - Lukas Müller sits at exactly 100 % ("voll", not over) from week 0 to +3.
  * - Felix Becker and Paul Richter are free next month (weeks +4/+5).
  * - Security-Audit ends at the end of next week.
  * - Three part-timers (0.5 / 0.6 / 0.8), one inactive person.
@@ -35,13 +35,13 @@ const EMPLOYEES: EmployeeSeed[] = [
 
 /** [name, color, startWeek, endWeek, status] */
 const PROJECTS: Array<[string, string, number, number, Project['status']]> = [
-  ['Website-Relaunch', 'blue', -4, 6, 'active'],
-  ['Mobile App 2.0', 'purple', -2, 14, 'active'],
-  ['Security-Audit', 'cyan', -4, 1, 'active'],
-  ['Datenplattform', 'teal', -2, 16, 'active'],
+  ['Website-Relaunch', 'cobalt', -4, 6, 'active'],
+  ['Mobile App 2.0', 'violet', -2, 14, 'active'],
+  ['Security-Audit', 'slate', -4, 1, 'active'],
+  ['Datenplattform', 'cyan', -2, 16, 'active'],
   ['CRM-Migration', 'indigo', 2, 12, 'planned'],
-  ['KI-Assistent', 'pink', 4, 16, 'planned'],
-  ['Onboarding-Portal', 'gray', -4, 3, 'active'],
+  ['KI-Assistent', 'fuchsia', 4, 16, 'planned'],
+  ['Onboarding-Portal', 'sky', -4, 3, 'active'],
 ];
 
 /** [employee #, project #, startWeek, endWeek, allocation, endDayOffset?] (1-based indices) */

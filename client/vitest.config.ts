@@ -8,6 +8,8 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
+    // Drawer/user-event flows in jsdom take 2–5 s each; under full parallel load the 5 s default flakes.
+    testTimeout: 15_000,
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     // Playwright e2e specs live in ./tests and run via `npm run test:e2e`, never in vitest.
     exclude: ['node_modules/**', 'dist/**', 'tests/**'],

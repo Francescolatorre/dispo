@@ -7,16 +7,18 @@ const HEIGHT = 24;
 const SCALE_MAX = 125;
 
 const BAR_COLOR: Record<WorkloadStatus, string> = {
-  free: 'green.300',
-  ok: 'blue.200',
-  warning: 'orange.300',
-  over: 'red.400',
+  free: 'load.free.strong',
+  luft: 'load.luft.strong',
+  ok: 'gray.300',
+  full: 'gray.500',
+  over: 'load.over.strong',
 };
 
 const STATUS_WORD: Record<WorkloadStatus, string> = {
   free: 'frei',
+  luft: 'mit Luft',
   ok: 'im Rahmen',
-  warning: 'voll',
+  full: 'voll',
   over: 'überbucht',
 };
 

@@ -317,7 +317,7 @@ export function AssignmentDrawer({ editor, onClose }: AssignmentDrawerProps) {
 
 function StatusBadge({ status, value }: { status: string; value: number }) {
   return (
-    <Badge bg={`load.${status}.bg`} color={`load.${status}.fg`} borderWidth="1px" borderColor={`load.${status}.swatch`} fontSize="xs" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+    <Badge bg={`load.${status}.bg`} color={`load.${status}.fg`} borderWidth="1px" borderColor={`load.${status}.strong`} fontSize="xs" sx={{ fontVariantNumeric: 'tabular-nums' }}>
       {formatPercent(value)}
     </Badge>
   );
