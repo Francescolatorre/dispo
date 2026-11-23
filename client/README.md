@@ -1,109 +1,15 @@
-# DispoMVP Client
+# Dispo – Client
 
-A modern React application for managing employee dispositions and project scheduling.
-
-## Technologies
-
-- React 18 with TypeScript
-- Chakra UI for components and theming
-- React Router for navigation
-- Vite for build tooling
-- Vitest for testing
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 16 or higher
-- npm 7 or higher
-
-### Installation
+React 18 + TypeScript + Chakra UI 2 (Vite). Überblick, Schnellstart, Datenquellen, Tests und
+bekannte Einschränkungen stehen im [README im Wurzelverzeichnis](../README.md); die Feature-Liste in
+[docs/COMPLETE_FEATURE_LIST.md](../docs/COMPLETE_FEATURE_LIST.md).
 
 ```bash
-# Install dependencies
 npm install
+npm run dev          # http://localhost:5173 (VITE_DATA_SOURCE=auto|api|local)
+npx vitest run       # Unit- und Komponententests (npm test = Watch-Modus)
+npm run typecheck
+npm run lint
+npm run build
+npm run test:e2e     # Playwright-Smoke-Tests (einmalig: npx playwright install chromium)
 ```
-
-### Development
-
-```bash
-# Start development server
-npm run dev
-
-# Run tests
-npm test
-
-# Run tests in watch mode
-npm test -- --watch
-
-# Run tests with coverage
-npm test -- --coverage
-```
-
-## Project Structure
-
-```
-src/
-├── components/         # Reusable UI components
-│   └── layout/        # Layout components (Navigation, Layout)
-├── pages/             # Page components
-├── styles/            # Global styles and theme
-├── test/             # Test utilities and setup
-└── App.tsx           # Root component
-```
-
-## Testing
-
-The project uses Vitest and React Testing Library for testing. Tests are co-located with their components. The testing setup includes:
-
-- Jest-like assertions
-- React Testing Library for component testing
-- Custom test utilities for common testing scenarios
-- Automatic test environment setup
-
-### Test Files
-
-- `*.test.tsx` - Component tests
-- `test/utils.tsx` - Testing utilities
-- `test/setup.ts` - Test environment configuration
-
-## Available Scripts
-
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
-- `npm test` - Run tests
-- `npm run lint` - Run ESLint
-- `npm run type-check` - Run TypeScript type checking
-
-## Component Architecture
-
-### Layout Components
-
-- `Layout.tsx` - Main layout wrapper
-  - Handles page structure
-  - Manages navigation drawer
-  - Provides consistent spacing
-
-- `Navigation.tsx` - Navigation component
-  - Responsive drawer
-  - Route management
-  - Chakra UI integration
-
-### Pages
-
-- `Dashboard.tsx` - Main dashboard view
-- `Projects.tsx` - Project management
-- `Employees.tsx` - Employee management
-- `Reports.tsx` - Reporting interface
-
-## Contributing
-
-1. Create a feature branch
-2. Make your changes
-3. Write or update tests
-4. Submit a pull request
-
-## License
-
-This project is private and confidential.

@@ -11,8 +11,11 @@ Stand der API: W3C WebML CG Draft (Nov 2026), imperative API `document.modelCont
 | `client/src/features/webmcp/modelContext.ts` | Dünner Adapter: `getModelContext()` (`document.modelContext ?? navigator.modelContext`), `registerTools(tools, signal)`, typisierte Minimal-Interfaces |
 | `client/src/features/webmcp/tools.ts` | Reine Tool-Fabrik `createPlanningTools(getContext, hooks)` – Schemas, Eingabeprüfung, Namensauflösung, Ergebnisse |
 | `client/src/features/webmcp/WebMCPBridge.tsx` | Unsichtbare Komponente in `<PlanningProvider>`: registriert alle Tools, sobald Daten geladen sind, meldet sie beim Unmount ab, zeigt Toasts bei Agent-Änderungen |
+| `client/src/features/webmcp/status.ts`, `WebMCPStatusLine.tsx` | Anzahl registrierter Tools als Kontext (gesetzt in `App.tsx` über `onRegistered`) und die Statuszeile „KI-Werkzeuge aktiv (WebMCP)“ in der Seitenleiste |
 
-Ohne WebMCP im Browser passiert nichts (kein Polyfill, keine zusätzliche Abhängigkeit). Im Dev-Build steht nach erfolgreicher Registrierung in der Konsole: `[WebMCP] 8 Werkzeuge registriert: …`.
+Ohne WebMCP im Browser passiert nichts (kein Polyfill, keine zusätzliche Abhängigkeit). Nach erfolgreicher Registrierung zeigt die Seitenleiste „KI-Werkzeuge aktiv (WebMCP)“; im Dev-Build steht zusätzlich in der Konsole: `[WebMCP] 8 Werkzeuge registriert: …`.
+
+Die E2E-Smoke-Tests (`client/tests/smoke.spec.ts`) prüfen Registrierung und `find_free_capacity` mit einem Stub für `document.modelContext`.
 
 ## Tools
 
