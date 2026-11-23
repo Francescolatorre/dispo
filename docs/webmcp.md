@@ -47,6 +47,12 @@ Alle Tools nehmen ein JSON-Objekt (`additionalProperties: false`) und liefern JS
 3. DevTools-Konsole: `[WebMCP] 8 Werkzeuge registriert: …` erscheint. Prüfen mit `!!document.modelContext`.
 4. **DevTools → Application → WebMCP**: listet die Tools mit Beschreibung; dort kann man ein Tool mit bearbeiteten Parametern manuell ausführen. Das Log „Invoked Tools“ zeigt Eingabe, Ausgabe und Fehler.
    Beispiel: `find_free_capacity` mit `{"from":"2026-W52","to":"2026-W53","minFreePercent":50}`, danach `create_assignment` mit `{"employeeName":"Felix","projectName":"KI-Assistent","start":"2026-W52","end":"2026-W53","allocation":50,"dryRun":true}`.
+   **Verifiziert (2026-11-23, Chrome 158 mit Flag):** `document.modelContext` vorhanden (Methoden `registerTool`, `getTools`, `executeTool`), alle 8 Tools registriert, `find_free_capacity` liefert Ergebnisse. Aufruf aus der Konsole: `executeTool` erwartet das **Tool-Objekt aus `getTools()`** und ein **Objekt** als Eingabe (kein JSON-String):
+   ```js
+   const t = (await document.modelContext.getTools()).find(x => x.name === 'find_free_capacity');
+   await document.modelContext.executeTool(t, { minFreePercent: 50 });
+   ```
+   Hinweis: Agenten, die eine Seite nur als DOM/Screenshot lesen (z. B. die Claude-in-Chrome-Erweiterung), sehen die WebMCP-Tools **nicht** von selbst – sie brauchen einen WebMCP-fähigen Konsumenten (eingebauter Chrome-Agent, Inspector-Erweiterung) oder rufen die Tools wie oben per JavaScript auf.
 5. Alternativ die Erweiterung **Model Context Tool Inspector** (Chrome Web Store): Tools auflisten, aufrufen oder per natürlicher Sprache mit eigenem Gemini-/OpenAI-/Anthropic-API-Key steuern lassen.
 
 ### Claude Code / Claude Desktop über das MCP-B Local Relay (ungetestet)
