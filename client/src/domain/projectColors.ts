@@ -5,7 +5,8 @@
  * excluded because it collides with "frei", pink because it reads as red under protanopia.
  *
  * Each key is a Chakra colour scale defined in `theme.ts` (Tailwind values):
- * `.600` = edge (bar leading edge, dot, swatch), `.100` = tint, `.800` = text on the tint.
+ * `.600` = edge (bar leading edge, dot, swatch), `.100` = tint, `.800` = text on the tint,
+ * `.50` = wash (resting bar fill), `.200` = line (resting bar border).
  */
 export const PROJECT_COLORS = ['sky', 'cobalt', 'indigo', 'violet', 'grape', 'fuchsia', 'cyan', 'slate'] as const;
 
@@ -52,12 +53,22 @@ export interface ProjectColorTokens {
   tint: string;
   /** Text on `tint`. */
   fg: string;
+  /** Resting bar fill: a very light tint so bars read as objects without hiding the heat. */
+  wash: string;
+  /** Resting bar border (1 px). */
+  line: string;
 }
 
 /** Chakra colour tokens of a (possibly legacy) project colour. */
 export function projectColorTokens(name: string | undefined | null): ProjectColorTokens {
   const c = projectColor(name);
-  return { edge: `${c}.600`, tint: c === 'slate' ? 'slate.200' : `${c}.100`, fg: `${c}.800` };
+  return {
+    edge: `${c}.600`,
+    tint: c === 'slate' ? 'slate.200' : `${c}.100`,
+    fg: `${c}.800`,
+    wash: c === 'slate' ? 'slate.100' : `${c}.50`,
+    line: c === 'slate' ? 'slate.300' : `${c}.200`,
+  };
 }
 
 /** First palette colour not yet used by `usedColors` (cycles when all are taken). */

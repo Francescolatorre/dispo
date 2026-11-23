@@ -23,6 +23,30 @@ describe('App', () => {
     expect(within(nav).getByRole('link', { name: 'Projekte' })).toHaveAttribute('href', '/projects');
     expect(screen.getByRole('heading', { level: 1, name: 'Planung' })).toBeInTheDocument();
   });
+
+  describe('WebMCP status line', () => {
+    afterEach(() => {
+      delete (document as unknown as { modelContext?: unknown }).modelContext;
+    });
+
+    it('is hidden when the browser has no WebMCP', async () => {
+      render(<App />);
+      await screen.findByTestId('planning-summary');
+      await act(async () => {});
+      expect(screen.queryByTestId('webmcp-status')).toBeNull();
+    });
+
+    it('appears in the sidebar footer once the tools are registered', async () => {
+      const registerTool = vi.fn();
+      (document as unknown as { modelContext: unknown }).modelContext = { registerTool };
+      render(<App />);
+      const status = await screen.findByTestId('webmcp-status');
+      expect(registerTool).toHaveBeenCalledTimes(8);
+      const nav = screen.getByRole('navigation', { name: 'Hauptnavigation' });
+      expect(nav).toContainElement(status);
+      expect(status).toHaveAccessibleName(/^KI-Werkzeuge aktiv \(WebMCP\): 8 Planungswerkzeuge/);
+    });
+  });
 });
 
 describe('AppRoutes', () => {

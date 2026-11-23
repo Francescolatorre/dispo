@@ -51,9 +51,10 @@ describe('projectColor', () => {
   });
 
   it('returns edge / tint / text tokens', () => {
-    expect(projectColorTokens('violet')).toEqual({ edge: 'violet.600', tint: 'violet.100', fg: 'violet.800' });
-    expect(projectColorTokens('purple')).toEqual({ edge: 'violet.600', tint: 'violet.100', fg: 'violet.800' });
-    expect(projectColorTokens('slate').tint).toBe('slate.200');
+    const violet = { edge: 'violet.600', tint: 'violet.100', fg: 'violet.800', wash: 'violet.50', line: 'violet.200' };
+    expect(projectColorTokens('violet')).toEqual(violet);
+    expect(projectColorTokens('purple')).toEqual(violet);
+    expect(projectColorTokens('slate')).toMatchObject({ tint: 'slate.200', wash: 'slate.100', line: 'slate.300' });
   });
 });
 

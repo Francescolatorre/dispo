@@ -20,6 +20,12 @@ function setup(props: Partial<ComponentProps<typeof PlanningBoard>> = {}) {
 // Plain selectors for the hot helpers: role queries over ~250 cells are slow in jsdom.
 const bodyRows = () => [...screen.getByRole('grid').querySelectorAll<HTMLElement>('[role="row"][data-employee-id]')];
 const rowNames = () => bodyRows().map((r) => r.querySelector('[role="rowheader"]')?.textContent ?? '');
+/** CSS text of the element's emotion class rule (last class name). */
+const cssRuleOf = (el: HTMLElement) => {
+  const cls = [...el.classList].pop() ?? '';
+  const css = [...document.querySelectorAll('style')].map((st) => st.textContent ?? '').join('');
+  return css.match(new RegExp(`\\.${cls}\\{[^}]*\\}`))?.[0] ?? '';
+};
 const weekHeaders = () => [...screen.getByRole('grid').querySelectorAll<HTMLElement>('[role="columnheader"][data-week-key]')];
 
 describe('PlanningBoard', () => {
@@ -81,6 +87,34 @@ describe('PlanningBoard', () => {
     expect(bar).toHaveTextContent('50 %');
     await user.click(bar);
     expect(onAssignmentSelect).toHaveBeenCalledWith('asg-06');
+  });
+
+  it('draws bars as tinted cards with a project-colour edge, also when the start is clipped', async () => {
+    setup();
+    await screen.findByRole('grid');
+    // Security-Audit starts on 26.10., before the visible range (KW 46).
+    const clipped = screen.getByRole('button', { name: /^Jonas Fischer: Security-Audit/ });
+    expect(clipped).toHaveAttribute('data-clipped-start', 'true');
+    // jsdom's cascade is unreliable for shorthands + var(), so read the bar's own emotion rule.
+    const color = 'slate'; // Security-Audit's seed colour
+    const rule = cssRuleOf(clipped);
+    // A light project tint and a tinted hairline, not plain white, so the bar stays distinct from the grid.
+    expect(rule).toContain(`background:var(--chakra-colors-${color}-100)`);
+    expect(rule).toContain(`border-color:var(--chakra-colors-${color}-300)`);
+    // The 3 px edge is a sticky element at the visible left end (next to the name column), with the chevron.
+    const edge = clipped.querySelector<HTMLElement>('[data-bar-edge]')!;
+    const edgeRule = cssRuleOf(edge);
+    expect(edgeRule).toContain('position:sticky');
+    expect(edgeRule).toMatch(/left:\d+px/);
+    const stripe = edge.firstElementChild as HTMLElement;
+    expect(cssRuleOf(stripe)).toContain('width:3px');
+    expect(cssRuleOf(stripe)).toContain(`background:var(--chakra-colors-${color}-600)`);
+    expect(edge.querySelectorAll('svg')).toHaveLength(1); // clipped chevron
+
+    // An unclipped bar has the same edge, without the chevron.
+    const unclipped = screen.getByRole('button', { name: /^Jonas Fischer: Mobile App 2\.0/ });
+    expect(unclipped).not.toHaveAttribute('data-clipped-start');
+    expect(unclipped.querySelector('[data-bar-edge] svg')).toBeNull();
   });
 
   it('filters by name search', async () => {

@@ -148,7 +148,8 @@ const AssignmentBar = ({ bar, project, employee, stickyLeft, highlight, dragging
   const aria = `${employee.name}: ${name}, ${a.allocation} %, ${formatDate(a.start)} bis ${formatDate(a.end)}${a.role ? `, Rolle ${a.role}` : ''}`;
   const width = Math.max(bar.width - 2, 8);
   const lit = highlight === 'on';
-  const hairline = `rgba(${INK},0.12)`;
+  const edgeLeft = stickyLeft - 8; // = name column width
+  const labelLeft = edgeLeft + (bar.clippedStart ? 21 : 9); // right of the sticky edge (+ chevron)
   return (
     <Tooltip
       openDelay={400}
@@ -182,16 +183,16 @@ const AssignmentBar = ({ bar, project, employee, stickyLeft, highlight, dragging
         display="flex"
         alignItems="center"
         gap={1}
-        pl={bar.clippedStart ? '3px' : '6px'}
+        pl={0}
         pr="4px"
         textAlign="left"
-        bg={lit ? tokens.tint : 'white'}
+        data-clipped-start={bar.clippedStart || undefined}
+        bg={lit ? tokens.tint : tokens.wash}
         color={lit ? tokens.fg : 'gray.800'}
         borderWidth="1px"
         borderStyle={dragging ? 'dashed' : 'solid'}
-        borderColor={dragging ? tokens.edge : hairline}
-        borderLeftWidth={bar.clippedStart ? '1px' : '3px'}
-        borderLeftColor={bar.clippedStart ? hairline : tokens.edge}
+        borderColor={dragging || lit ? tokens.edge : tokens.line}
+        borderLeftWidth={0}
         borderLeftRadius={bar.clippedStart ? 0 : 'sm'}
         borderRightRadius={bar.clippedEnd ? 0 : 'sm'}
         opacity={dragging ? 0.4 : highlight === 'off' ? 0.35 : 1}
@@ -199,16 +200,36 @@ const AssignmentBar = ({ bar, project, employee, stickyLeft, highlight, dragging
         userSelect="none"
         transition="background 100ms, opacity 150ms"
         sx={{ touchAction: 'none' }}
-        _hover={{ bg: lit ? tokens.tint : '#EDEEF1' }}
+        _hover={{ bg: tokens.tint }}
         _focusVisible={{ outline: '2px solid', outlineColor: 'accent.500', outlineOffset: '-2px', zIndex: 2 }}
       >
         {!bar.clippedStart && <ResizeHandle side="start" />}
-        {bar.clippedStart && <ChevronLeftIcon boxSize="10px" color="gray.400" flexShrink={0} />}
+        {/* The 3 px project edge is sticky: it stays at the visible left end (next to the name
+            column) when the bar starts before the range or is scrolled under the names, so a bar
+            never degrades into plain text on the grid. Clipped bars add a chevron next to it. */}
+        <Box
+          as="span"
+          aria-hidden
+          data-bar-edge
+          position="sticky"
+          left={`${edgeLeft}px`}
+          zIndex={1}
+          alignSelf="stretch"
+          flexShrink={0}
+          display="flex"
+          alignItems="center"
+          gap="2px"
+          my="-1px"
+          pr="2px"
+        >
+          <Box as="span" w="3px" h="full" bg={tokens.edge} borderLeftRadius={bar.clippedStart ? 0 : 'sm'} />
+          {bar.clippedStart && <ChevronLeftIcon boxSize="10px" color="gray.400" />}
+        </Box>
         {width >= 24 && (
           <Text
             as="span"
             position="sticky"
-            left={`${stickyLeft}px`}
+            left={`${labelLeft}px`}
             flex="0 1 auto"
             minW={0}
             fontSize="xs"
